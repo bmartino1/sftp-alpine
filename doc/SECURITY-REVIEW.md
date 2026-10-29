@@ -89,3 +89,11 @@ Sources:
 3. Confirm Fail2Ban action expansion, firewall backend selection, bans/unbans, ban database persistence, IPv6 and recidive; record previously passed tests as evidence only when logs are available.
 4. Evaluate Debian base and optional Alpine/DHI variants against the same functional tests; retain WHOIS compatibility as a requirement rather than choosing a base solely for size.
 5. Define build-time scanning, update eligibility, CVE severity/applicability decisions, deployment, health checks and rollback; avoid in-place sshd replacement while accepting sessions without designed restart behavior.
+\n## Implemented private-branch SSHD baseline — 2026-10-29
+- Default `LoginGraceTime 20`, `MaxAuthTries 3`, `MaxSessions 1`, `MaxStartups 10:30:30`.
+- Explicit password-only SFTP without PAM, keyboard-interactive, public-key, TTY, forwarding or user environment.
+- Internal SFTP logs to AUTHPRIV/INFO. No forced crypto list or FIPS claim; compatibility remains to be tested.
+- New `scripts/validate-security.sh` is copied to `/usr/local/bin/validate-security.sh`. Run after normal startup and host key generation: `bash /usr/local/bin/validate-security.sh`. It checks `sshd -t`, effective `sshd -T`, key restrictions and Fail2Ban readiness. Warnings do not constitute proof that packet filtering is working.
+- **Important:** this audit expects the password-only profile; future key-auth and FIPS profiles should have their own assertions. It checks global effective settings, not all per-user `Match` expansions or actual SFTP transfers. Add integration/negative tests before production use.
+- **Important:** the running image reads persistent `/config/sshd/sshd_config`; updated defaults do not automatically overwrite an existing production file.
+- Remaining high-risk issues: entrypoint default admin credential seeding, writable config mutation via sed, APT errors masked in updater, reliable Fail2Ban startup enforcement, and effective per-network ban tests. These have deliberately not been changed in this patch.
