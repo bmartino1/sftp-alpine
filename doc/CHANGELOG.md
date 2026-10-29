@@ -51,6 +51,12 @@ Changes to this private repository are recorded here, including documentation-on
 **Rollback:** restore prior private Git commits and redeploy last validated image; back up /config before testing. Never test Alpine against production bind mounts.
 **Status:** experimental; code review and integration tests required before production rollout.
 
+## 2026-10-29 — Fail2Ban startup gate
+**Modified:** `entrypoint.sh`, `doc/CHANGELOG.md`.
+**Behavior:** after attempting Fail2Ban start, poll daemon and `sshd` jail readiness (10 one-second retries) before starting sshd. Default `F2B_REQUIRED=true` refuses to start SFTP if jail is unavailable; `F2B_REQUIRED=false` permits isolated debugging.
+**Known limits:** a responding jail does not prove iptables/nftables packet enforcement; that requires integration testing. In production test with an alternate port and known-good fallback before deploying. No live build or runtime tests performed.
+**Status:** private experimental change, not yet production-validated.
+
 ## Required format for future entries
 - Date/time (UTC), author/agent, purpose and issue/PR
 - Added/modified/deleted paths, with exact behavior differences
