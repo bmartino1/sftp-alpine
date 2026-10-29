@@ -47,13 +47,17 @@ mkdir -p \
   /var/run/sshd /var/run/fail2ban /var/log /opt/debug
 
 # ===== default admin (first boot) =====
-DEFAULT_ADMIN="${DEFAULT_ADMIN:-true}"
+DEFAULT_ADMIN="${DEFAULT_ADMIN:-false}"
 ADMIN_USER="${ADMIN_USER:-admin}"
-ADMIN_PASS="${ADMIN_PASS:-password}"
+ADMIN_PASS="${ADMIN_PASS:-}"
 
 if [[ ! -s /config/sshd/users.conf ]]; then
   if [[ "${DEFAULT_ADMIN,,}" == "true" ]]; then
-    install -D -m 0644 /dev/stdin /config/sshd/users.conf <<EOF
+    if [[ -z "$ADMIN_PASS" || "$ADMIN_PASS" == "password" || "$ADMIN_PASS" == "change-me-now" ]]; then
+      warn "DEFAULT_ADMIN=true requires a non-placeholder ADMIN_PASS; refusing insecure first boot"
+      exit 1
+    fi
+    install -D -m 0600 /dev/stdin /config/sshd/users.conf <<EOF
 # username:password[:e][:uid][:gid][:dir1,dir2,...]
 # seeded on first boot — CHANGE THIS PASSWORD!
 ${ADMIN_USER}:${ADMIN_PASS}:1000:100
@@ -94,10 +98,11 @@ fi
 log "Setting ownership and permissions on /config"
 chown -R root:root /config/fail2ban /config/sshd
 chmod -R 750 /config
-for f in /config/fail2ban/*.local /config/sshd/*.conf /config/sshd/users.conf; do
+for f in /config/fail2ban/*.local /config/sshd/*.conf; do
   [[ -e "$f" ]] && chmod 644 "$f"
 done
 chmod 600 /config/sshd/keys/*_key 2>/dev/null || true
+chmod 0600 /config/sshd/users.conf || true
 chmod 600 /config/userkeys/*_key 2>/dev/null || true
 
 # --- Apply active configs (idempotent) ---
@@ -253,6 +258,7 @@ ensure_log /config/log/whois.log
 chown -R root:root /config/sshd /config/fail2ban || true
 chmod 0750 /config /config/sshd /config/fail2ban || true
 find /config -type f \( -name "*.conf" -o -name "*.local" \) -exec chmod 0644 {} \; || true
+chmod 0600 /config/sshd/users.conf || true
 find /config/sshd/keys -type f -name "*_key" -exec chmod 0600 {} \; 2>/dev/null || true
 chmod 0600 /etc/ssh/sshd_config || true
 
