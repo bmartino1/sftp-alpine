@@ -25,10 +25,12 @@ HostKey /config/sshd/keys/ssh_host_rsa_key
 #AuthorizedKeysFile /config/userkeys
 
 # Login Grace and Timeouts
-LoginGraceTime 0
-# Allow 30 seconds to authenticate (CVE FIX)
+LoginGraceTime 20
+# Bounded authentication deadline; 0 disables the timeout (do not use 0).
 
-MaxAuthTries 2
+MaxAuthTries 3
+MaxSessions 1
+MaxStartups 10:30:30
 # Limit failed login attempts
 
 #MaxSessions 2
@@ -44,6 +46,12 @@ UseDNS no
 
 # Limit access (No shells, no tunnels, no forwards... just sftp)
 PermitRootLogin no
+PasswordAuthentication yes
+KbdInteractiveAuthentication no
+PubkeyAuthentication no
+UsePAM no
+PermitTTY no
+PermitUserEnvironment no
 X11Forwarding no
 AllowTcpForwarding no
 GatewayPorts no
@@ -55,8 +63,8 @@ AllowAgentForwarding no
 #
 
 # Force sftp and chroot jail
-Subsystem sftp internal-sftp
-ForceCommand internal-sftp
+Subsystem sftp internal-sftp -f AUTHPRIV -l INFO
+ForceCommand internal-sftp -f AUTHPRIV -l INFO
 ChrootDirectory %h
 
 # Logging
