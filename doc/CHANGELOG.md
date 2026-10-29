@@ -82,6 +82,13 @@ Changes to this private repository are recorded here, including documentation-on
 **Validation:** static code review only; **not** validated using Fail2Ban binary or live packet enforcement. Run `fail2ban-client -t` and audit on a disposable container; verify ban/unban, recidive, action expansion and restart persistence before production. An extra jail action may have distribution-specific requirements.
 **Status:** private experimental, not production-validated.
 
+## 2026-10-29 — Runtime chroot/share ownership enforcement
+**Modified:** `entrypoint.sh`, `doc/CHANGELOG.md`.
+**Behavior:** apply root:root 0755 to each /home/USER chroot; create missing requested directories and assign SFTP account numeric UID/GID with mode 2770. Inspect pre-existing first-level directories (including mounted shares), preserving their permissions by default. Optional `SHARE_MOUNT_PERMS=group` applies nonrecursive chown and chmod 2770 to those directories; this can change the host bind-mount root, so must be explicitly requested after backup. Never recursively change host data. Reject share paths containing slash/traversal and symlink share roots. Corrected an earlier malformed literal backslash-n shell block.
+**Compatibility:** Existing nobody:users (often 65534:100) directories with mode 777 continue to work when left untouched; future tighter group modes require checking SFTP user's GID 100 and host ACLs. PUID/PGID are not used for file-user identity.
+**Testing:** source edit only; no Alpine build, `bash -n`, real mount permission test or FileZilla transfer has been performed. Check in isolated test before prod. Do not enable opt-in ownership mode on /VMs until impact reviewed.
+**Status:** private untested.
+
 ## Required format for future entries
 - Date/time (UTC), author/agent, purpose and issue/PR
 - Added/modified/deleted paths, with exact behavior differences
