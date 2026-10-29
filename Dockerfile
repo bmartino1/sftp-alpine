@@ -84,7 +84,7 @@ COPY entrypoint.sh      /usr/local/bin/entrypoint.sh
 COPY update-inplace.sh  /usr/local/bin/update-inplace.sh
 RUN chmod +x /usr/local/bin/*.sh
 
-# Healthcheck & port
+# Non-destructive manual preflight: bash /usr/local/bin/validate-security.sh\nCOPY scripts/validate-security.sh /usr/local/bin/validate-security.sh\nRUN chmod 0755 /usr/local/bin/validate-security.sh\n\n# Healthcheck & port
 EXPOSE 22
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
   CMD bash -lc 'ss -lnt | grep -q ":22 " || exit 1'
