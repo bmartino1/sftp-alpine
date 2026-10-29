@@ -65,6 +65,15 @@ Changes to this private repository are recorded here, including documentation-on
 **Caution:** rolling packages can introduce regressions; upgrades only become effective for SSHD when the daemon is (re)started. Existing /config state must be backed up. No changes to production or public repository.
 **Status:** experimental development.
 
+## 2026-10-29 — User UID/GID parsing and private production Compose review
+**Modified:** `entrypoint.sh`, `defaults/sshd/users.conf`, `examples/docker-compose.yml`, `doc/CHANGELOG.md`.
+**Behavior:** support `user:password:uid:gid[:dirs]` and `user:encrypted_password:e:uid:gid[:dirs]` consistently; opt-in first-boot admin supports `ADMIN_USER`, `ADMIN_PASS`, `ADMIN_UID`, `ADMIN_GID`. Reject malformed account specifications without printing passwords. Removed checked-in `admin:password` from packaged default. Do not recursively chown existing populated/mounted user data directories.
+**Compose:** experimental Alpine edge example uses isolated test config and port 2222, retains NET_ADMIN/NET_RAW for testing firewall actions, and does not disable seccomp/AppArmor. Private Proxmox paths, IPs, and real credentials are not added.
+**Compatibility:** existing persistent `/config/sshd/users.conf` remains in effect. `PUID=0` and `PGID=0` are not currently used to assign the SFTP account UID/GID. If an existing Unix user has the wrong numeric UID/GID, the entrypoint does not automatically migrate it. Existing mapped files may need host permission/ACL changes; do not recursively chown host storage.
+**Validation:** source review and GitHub commit only; Alpine build, live SFTP transfer and ban integration testing NOT performed.
+**Rollback:** revert private repo commits; back up /config and run on isolated test mounts.
+**Status:** requires test before public/production use.
+
 ## Required format for future entries
 - Date/time (UTC), author/agent, purpose and issue/PR
 - Added/modified/deleted paths, with exact behavior differences
