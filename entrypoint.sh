@@ -50,9 +50,12 @@ mkdir -p \
 DEFAULT_ADMIN="${DEFAULT_ADMIN:-false}"
 ADMIN_USER="${ADMIN_USER:-admin}"
 ADMIN_PASS="${ADMIN_PASS:-}"
+ADMIN_UID="${ADMIN_UID:-1000}"
+ADMIN_GID="${ADMIN_GID:-100}"
 
 if [[ ! -s /config/sshd/users.conf ]]; then
   if [[ "${DEFAULT_ADMIN,,}" == "true" ]]; then
+    [[ "$ADMIN_UID" =~ ^[0-9]+$ && "$ADMIN_GID" =~ ^[0-9]+$ ]] || { warn "ADMIN_UID/ADMIN_GID must be numeric"; exit 1; }
     if [[ -z "$ADMIN_PASS" || "$ADMIN_PASS" == "password" || "$ADMIN_PASS" == "change-me-now" ]]; then
       warn "DEFAULT_ADMIN=true requires a non-placeholder ADMIN_PASS; refusing insecure first boot"
       exit 1
@@ -60,7 +63,7 @@ if [[ ! -s /config/sshd/users.conf ]]; then
     install -D -m 0600 /dev/stdin /config/sshd/users.conf <<EOF
 # username:password[:e][:uid][:gid][:dir1,dir2,...]
 # seeded on first boot — CHANGE THIS PASSWORD!
-${ADMIN_USER}:${ADMIN_PASS}:1000:100
+${ADMIN_USER}:${ADMIN_PASS}:${ADMIN_UID}:${ADMIN_GID}
 EOF
     log "Seeded /config/sshd/users.conf with default admin (CHANGE THE PASSWORD)"
   else
@@ -336,11 +339,30 @@ fi
 
 create_user() {
   local line="$*"
-  IFS=':' read -r username password maybe_e uid gid dirs <<<"$line"
-  [[ "$username" =~ ^$reUser$ && "$password" =~ ^$rePass$ ]] || { warn "Bad user spec: $line"; return 0; }
-
-  local chpasswd_opt=
-  [[ "${maybe_e:-}" == "e" ]] && chpasswd_opt="-e"
+  local username password uid="" gid="" dirs="" chpasswd_opt=""
+  local -a parts=()
+  IFS=':' read -r -a parts <<<"$line"
+  username="${parts[0]:-}"
+  password="${parts[1]:-}"
+  # Supported: user:pass:uid:gid[:dirs] OR user:encrypted-hash:e:uid:gid[:dirs]
+  if [[ "${parts[2]:-}" == "e" ]]; then
+    chpasswd_opt="-e"
+    uid="${parts[3]:-}"
+    gid="${parts[4]:-}"
+    dirs="${parts[5]:-}"
+    (( ${#parts[@]} <= 6 )) || { warn "Invalid user spec for '$username'"; return 1; }
+  else
+    uid="${parts[2]:-}"
+    gid="${parts[3]:-}"
+    dirs="${parts[4]:-}"
+    (( ${#parts[@]} <= 5 )) || { warn "Invalid user spec for '$username'"; return 1; }
+  fi
+  if [[ ! "$username" =~ ^$reUser$ || ! "$password" =~ ^$rePass$ ||
+        ( -n "$uid" && ! "$uid" =~ ^[0-9]+$ ) ||
+        ( -n "$gid" && ! "$gid" =~ ^[0-9]+$ ) ]]; then
+    warn "Invalid account specification for user '${username:-unknown}'"  # Never output password
+    return 1
+  fi
 
   local useradd_opts=()
   [[ -n "${uid:-}" ]] && useradd_opts+=(--non-unique --uid "$uid")
@@ -382,7 +404,7 @@ create_user() {
     for sub in "${arr[@]}"; do
       [[ -z "$sub" ]] && continue
       mkdir -p "/home/$username/$sub"
-      chown -R "$(id -u "$username"):$ugid" "/home/$username/$sub"
+      # Do not recursively chown a host bind mount or users\x27 existing data.\n      if ! mountpoint -q "/home/$username/$sub"; then\n        if [[ -z "$(ls -A "/home/$username/$sub" 2>/dev/null)" ]]; then\n          chown "$(id -u "$username"):$ugid" "/home/$username/$sub"\n        fi\n      fi
       log "Ensured /home/$username/$sub"
     done
   fi
