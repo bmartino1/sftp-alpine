@@ -84,10 +84,10 @@ COPY entrypoint.sh      /usr/local/bin/entrypoint.sh
 COPY update-inplace.sh  /usr/local/bin/update-inplace.sh
 RUN chmod +x /usr/local/bin/*.sh
 
-# Non-destructive manual preflight: bash /usr/local/bin/validate-security.sh\nCOPY scripts/validate-security.sh /usr/local/bin/validate-security.sh\nRUN chmod 0755 /usr/local/bin/validate-security.sh\n\n# Healthcheck & port
+# Non-destructive manual preflight: bash /usr/local/bin/validate-security.sh\nCOPY scripts/validate-security.sh scripts/healthcheck.sh scripts/security-status.sh /usr/local/bin/\nRUN chmod 0755 /usr/local/bin/validate-security.sh /usr/local/bin/healthcheck.sh /usr/local/bin/security-status.sh\n\n# Healthcheck & port
 EXPOSE 22
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-  CMD bash -lc 'ss -lnt | grep -q ":22 " || exit 1'
+  CMD ["/usr/local/bin/healthcheck.sh"]
 
 # ----- Build-time version stamp (what this image ships with) -----
 RUN mkdir -p /opt/debug && \
