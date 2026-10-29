@@ -123,6 +123,14 @@ Changes to this private repository are recorded here, including documentation-on
 **Validation:** source inspection only; no live Alpine Docker build, end-to-end SFTP, Fail2Ban packet enforcement or periodic restart testing completed.
 **Status:** private development; not production validated.
 
+## 2026-10-29 — Final Alpine readiness source audit
+**Modified:** `entrypoint.sh`, `doc/CHANGELOG.md`. **Added:** `doc/ALPINE-READINESS-AUDIT.md`.
+**Fix:** removed two malformed literal escaped-newline sequences in entrypoint that affected password handling and empty-user failure.
+**Audit scope:** Alpine package readiness, first boot and /config seeding, user/password synchronization, UID/GID/chroot/mount permissions, SSHD hardening, Fail2Ban actions/filters, WHOIS, runtime upgrades and FIPS boundaries.
+**Incomplete items:** no Docker build or `bash -n` executed; current SFTP_USERS and CLI additions can conflict with users.conf; removing users is not automatically enforced; no file watcher; existing Fail2Ban overrides persist; actual firewall drop and WHOIS need runtime tests. Startup updater still continues on failure.
+**Security:** no live secrets added; no public or production modifications.
+**Status:** static review complete, integration tests pending; private experimental release only.
+
 ## Required format for future entries
 - Date/time (UTC), author/agent, purpose and issue/PR
 - Added/modified/deleted paths, with exact behavior differences
