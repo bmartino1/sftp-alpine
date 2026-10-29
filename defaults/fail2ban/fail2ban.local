@@ -1,0 +1,23 @@
+[Definition]
+# IPv6 handling
+allowipv6 = auto
+
+# Logging
+loglevel   = INFO
+logtarget  = /config/log/fail2ban.log
+
+# Socket and PID #
+syslogsocket = auto
+socket = /var/run/fail2ban/fail2ban.sock
+pidfile = /var/run/fail2ban/fail2ban.pid
+
+# Database Settings #
+
+# Persistent database for bans and docker reboots
+dbfile = /config/fail2ban/fail2ban.sqlite3
+
+# Keep bans for 7 days
+dbpurgeage = 7d
+
+# Max matches per ticket in DB
+dbmaxmatches = 10

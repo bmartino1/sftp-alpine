@@ -1,0 +1,42 @@
+[DEFAULT]
+# Ignore list (add your LANs here if desired)
+ignoreip    = 127.0.0.1/8
+# e.g. ignoreip = 127.0.0.1/8 192.168.0.0/16 172.16.0.0/12
+#Localhost, internal subnet, docker network...
+
+# Timings
+bantime     = 86400
+#24h
+findtime    = 600
+#10m
+maxretry    = 3
+
+# Logging/backends
+backend     = polling
+usedns      = warn
+logencoding = auto
+
+# Database lives in /config
+dbfile      = /config/fail2ban/fail2ban.sqlite3
+dbpurgeage  = 7d
+
+# Default ban action (iptables by default; entrypoint auto-switches to nft if needed)
+banaction = iptables-multiport
+
+# ***** NO EMAIL. Only ban + whois → /config/log/whois.log *****
+# Use %(port)s so jails can override port; quotes ensure strings.
+action = %(banaction)s[name=%(__name__)s, port="%(port)s", protocol="tcp"]
+         logwhois[logpath=/config/log/whois.log]
+
+# ---------- JAILS ----------
+
+[sshd]
+enabled = true
+# IMPORTANT: this is the *container* SSHD port (keep 22 unless you change sshd_config)
+port    = 22
+filter  = sshd
+logpath = /config/log/auth.log
+maxretry = 5
+#a tad more forgiving for typos 3-5
+findtime = 600
+bantime  = 3600
