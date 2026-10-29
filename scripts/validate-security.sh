@@ -22,6 +22,7 @@ expect pubkeyauthentication no
 expect permittty no
 expect x11forwarding no
 expect allowtcpforwarding no
+expect disableforwarding yes
 expect allowagentforwarding no
 expect permituserenvironment no
 expect permittunnel no
