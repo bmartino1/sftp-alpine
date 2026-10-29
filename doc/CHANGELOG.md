@@ -131,6 +131,13 @@ Changes to this private repository are recorded here, including documentation-on
 **Security:** no live secrets added; no public or production modifications.
 **Status:** static review complete, integration tests pending; private experimental release only.
 
+## 2026-10-29 — Alpine runtime: SSHD jail backend failure
+**Modified:** `defaults/fail2ban/jail.local`, `doc/CHANGELOG.md`.
+**Observed:** first successful Alpine edge Docker build installed Fail2Ban 1.1.1, OpenSSH 10.6p1 and WHOIS. In isolated LXC test, Fail2Ban failed before SSHD startup: `Backend 'systemd' failed to initialize due to No module named 'systemd'`. Fail2Ban's effective config had `['add', 'sshd', 'systemd']` despite global `[DEFAULT] backend = polling`.
+**Fix:** explicitly set `backend = polling` in bundled `[sshd]` jail to override the packaged SSHD-specific systemd default and use `/config/log/auth.log`.
+**Migration:** existing persisted `/config/fail2ban/jail.local` is intentionally not overwritten on restart. Test installations must update that persisted file separately (or recreate only disposable test config).
+**Follow-up:** check rsyslog imkmsg /dev/kmsg warning, verify actual jail initialization, all firewall actions and auth log routing. No production changes.
+
 ## Required format for future entries
 - Date/time (UTC), author/agent, purpose and issue/PR
 - Added/modified/deleted paths, with exact behavior differences
