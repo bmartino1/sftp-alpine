@@ -138,6 +138,12 @@ Changes to this private repository are recorded here, including documentation-on
 **Migration:** existing persisted `/config/fail2ban/jail.local` is intentionally not overwritten on restart. Test installations must update that persisted file separately (or recreate only disposable test config).
 **Follow-up:** check rsyslog imkmsg /dev/kmsg warning, verify actual jail initialization, all firewall actions and auth log routing. No production changes.
 
+## 2026-10-29 — Explicit polling for all four Alpine Fail2Ban jails
+**Modified:** `defaults/fail2ban/jail.local`, `defaults/fail2ban/jail.d/00-sshd.local`, `defaults/fail2ban/jail.d/10-sshd-extras.local`, `doc/CHANGELOG.md`.
+**Reason:** Alpine's packaged SSHD jail selected systemd despite the global default; first integration test failed without python systemd. Explicit `backend = polling` now appears in `[sshd]`, `[sshd-cipher-mismatch]`, `[sshd-banner-fail]` and `[recidive]`. Removed literal escaped newline artifacts in two retired jail fragments.
+**Critical migration:** Existing `/config/fail2ban/jail.local` and `jail.d` are not overwritten. Existing test configurations must be individually patched or separately reset; user secrets and SSH host keys must be preserved.
+**Validation:** previously captured Fail2Ban dry-run showed sshd was systemd and the other three were polling. New all-jail overrides are committed, but rebuild, full startup and firewall enforcement remain unverified. Keep SSHD fail closed.
+
 ## Required format for future entries
 - Date/time (UTC), author/agent, purpose and issue/PR
 - Added/modified/deleted paths, with exact behavior differences
