@@ -629,6 +629,17 @@ if [[ "${F2B_REQUIRED:-true}" != "false" ]]; then
   log "Fail2Ban readiness check passed"
 fi
 
+# ===== optional periodic Alpine package upgrades =====
+# Default off; service restart required after binary replacement.
+if [[ "${AUTO_UPDATE_INTERVAL_HOURS:-0}" != "0" ]]; then
+  if command -v apk >/dev/null 2>&1; then
+    log "Enabling periodic Alpine updates (every ${AUTO_UPDATE_INTERVAL_HOURS}h; not hot-patching sshd)"
+    /usr/local/bin/periodic-update.sh &
+  else
+    warn "Periodic updates supported only on Alpine"
+  fi
+fi
+
 # ===== mirror key logs to Docker stdout (toggle with TAIL_LOGS=false) =====
 case "${TAIL_LOGS:-true}" in
   1|true|yes|on|TRUE|YES|ON)
