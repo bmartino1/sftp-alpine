@@ -105,6 +105,16 @@ Changes to this private repository are recorded here, including documentation-on
 **Rollback:** use last known-good deployed image and backed-up /config; older Debian path: `docker build -f Dockerfile.debian .`.
 **Status:** private development / pending integration tests.
 
+## 2026-10-29 — Alpine migration README and license audit
+**Modified:** `README.md`, `Dockerfile`, `doc/README.md`, `doc/CHANGELOG.md`.
+**Added:** `doc/THIRD-PARTY-LICENSES.md`.
+**License decision:** preserved the existing MIT root LICENSE unchanged; third-party Alpine packages have independent licenses (edge/community WHOIS GPL-2.0-or-later). Inventory/redistribution obligations need review before public image release.
+**Documentation:** removed obsolete Debian 12/Ubuntu assumptions, inaccurate default-password claims, stale phusion/baseimage description and broken legacy examples; explained Alpine edge, WHOIS, users.conf, mounted shares, Fail2Ban, rolling updates, FIPS limits, private development, and verification.
+**Build:** check that `whois`, `sshd` and `fail2ban-client` executables exist at image build time, failing immediately if not installed.
+**Validation:** package metadata checked against Alpine's published index, source changes committed; container build, runtime, security functions and third-party notices inside a published image are **not tested**.
+**Deployment:** public repository and production image unchanged; no credentials added.
+**Status:** development review pending.
+
 ## Required format for future entries
 - Date/time (UTC), author/agent, purpose and issue/PR
 - Added/modified/deleted paths, with exact behavior differences
