@@ -541,6 +541,27 @@ else
   warn "fail2ban not installed"
 fi
 
+# ===== Fail2Ban readiness before exposing SFTP =====
+# Default fail closed: start no SFTP service when Fail2Ban is not healthy.
+# Set F2B_REQUIRED=false for isolated debugging only.
+if [[ "${F2B_REQUIRED:-true}" != "false" ]]; then
+  f2b_ready=false
+  if command -v fail2ban-client >/dev/null 2>&1; then
+    for i in {1..10}; do
+      if fail2ban-client ping >/dev/null 2>&1 && fail2ban-client status sshd >/dev/null 2>&1; then
+        f2b_ready=true
+        break
+      fi
+      sleep 1
+    done
+  fi
+  if [[ "$f2b_ready" != true ]]; then
+    warn "Fail2Ban daemon / sshd jail not ready; refusing to expose SFTP (F2B_REQUIRED=true)"
+    exit 1
+  fi
+  log "Fail2Ban readiness check passed"
+fi
+
 # ===== mirror key logs to Docker stdout (toggle with TAIL_LOGS=false) =====
 case "${TAIL_LOGS:-true}" in
   1|true|yes|on|TRUE|YES|ON)
