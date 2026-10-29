@@ -42,6 +42,15 @@ Changes to this private repository are recorded here, including documentation-on
 **Deployment/rollback:** defaults are seeded only when `/config/sshd/sshd_config` is absent; existing persistent configs remain unchanged. Backup live config, compare, validate offline, then deploy explicitly. Revert these commits to restore old defaults; restart from last tested image if needed.
 **Status:** private development only, not yet integration-tested or ready for public release.
 
+## 2026-10-29 — Harden first boot, fix distro updates, and prototype Alpine
+**Modified:** `entrypoint.sh` (disable default admin/password; require explicit non-placeholder password when opted in; tighten users.conf permissions); `update-inplace.sh` (fail on update errors; apt upgrade or apk upgrade within configured distro); `Dockerfile` (stronger health check and utility scripts); `doc/CHANGELOG.md` (this record).
+**Added:** `Dockerfile.alpine` (experimental Alpine 3.23 Bash-enabled image); `scripts/healthcheck.sh` (SSHD/Fail2Ban daemon health); `scripts/security-status.sh` (package version inventory and advisory URLs); `doc/ALPINE-FIPS-PLAN.md` (test plan, FIPS scope and limitations).
+**Not changed:** production deployment, public repository, Fail2Ban firewall rules and cipher lists.
+**Risk and limitations:** first-boot behavior intentionally changes; set up real user credentials before starting a fresh container. Existing persisted configs are retained. Alpine path is **unbuilt and untested** and may need compatibility fixes. Health checks do not prove firewall enforcement; version reporting does not classify CVEs; FIPS remains research-only.
+**Validation:** repository source edits only; no running container, Docker build, functional packet drop, or FIPS validation performed.
+**Rollback:** restore prior private Git commits and redeploy last validated image; back up /config before testing. Never test Alpine against production bind mounts.
+**Status:** experimental; code review and integration tests required before production rollout.
+
 ## Required format for future entries
 - Date/time (UTC), author/agent, purpose and issue/PR
 - Added/modified/deleted paths, with exact behavior differences
