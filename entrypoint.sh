@@ -18,8 +18,8 @@ shopt -s nullglob
 # ===== version helpers =====
 ver_fail2ban()  { command -v fail2ban-client >/dev/null 2>&1 && fail2ban-client -V 2>/dev/null | head -n1 | sed 's/[^0-9.]*\([0-9.]*\).*/\1/' || echo "unknown"; }
 ver_ssh_client(){ command -v ssh >/dev/null 2>&1 && ssh -V 2>&1 | sed -n 's/.*OpenSSH_\([^ ]*\).*/\1/p' || echo "unknown"; }
-ver_ssh_server(){ dpkg-query -W -f='${Version}\n' openssh-server 2>/dev/null || echo "unknown"; }
-ver_whois()     { dpkg-query -W -f='${Version}\n' whois 2>/dev/null || echo "unknown"; }
+ver_ssh_server(){ if command -v apk >/dev/null 2>&1; then apk info -v openssh-server 2>/dev/null | head -n1; else dpkg-query -W -f='${Version}\n' openssh-server 2>/dev/null; fi; }
+ver_whois()     { if command -v apk >/dev/null 2>&1; then apk info -v whois 2>/dev/null | head -n1; else dpkg-query -W -f='${Version}\n' whois 2>/dev/null; fi; }
 ver_glibc()     { ldd --version 2>/dev/null | head -n1 | awk '{print $NF}' || echo "unknown"; }
 
 print_versions() {
@@ -99,8 +99,8 @@ fi
 
 # --- Permissions (conservative) ---
 log "Setting ownership and permissions on /config"
-chown -R root:root /config/fail2ban /config/sshd
-chmod -R 750 /config
+chown root:root /config /config/fail2ban /config/sshd /config/sshd/keys
+chmod 0750 /config /config/fail2ban /config/sshd /config/sshd/keys
 for f in /config/fail2ban/*.local /config/sshd/*.conf; do
   [[ -e "$f" ]] && chmod 644 "$f"
 done
@@ -258,7 +258,7 @@ ensure_log /config/log/fail2ban.log
 ensure_log /config/log/whois.log
 
 # ===== perms =====
-chown -R root:root /config/sshd /config/fail2ban || true
+chown root:root /config/sshd /config/fail2ban || true
 chmod 0750 /config /config/sshd /config/fail2ban || true
 find /config -type f \( -name "*.conf" -o -name "*.local" \) -exec chmod 0644 {} \; || true
 chmod 0600 /config/sshd/users.conf || true
@@ -380,7 +380,7 @@ create_user() {
     fi
     log "User $username exists; syncing configured credentials"
   else
-    useradd -M -d "/home/$username" -s /usr/sbin/nologin "${useradd_opts[@]}" "$username"
+    useradd -M -d "/home/$username" -s "$(command -v nologin || echo /sbin/nologin)" "${useradd_opts[@]}" "$username"
     log "Created SFTP user $username"
   fi
 
