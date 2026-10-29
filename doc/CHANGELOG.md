@@ -1,3 +1,9 @@
+## 2026-10-29 — Private Tailscale home-lab deployment and testing scope
+**Modified:** `README.md`, `doc/CHANGELOG.md`.
+**Target:** private Docker Hub Alpine image for authorized friends using FileZilla, NAS and Docker SFTP clients over Tailscale. Hardened security controls guided by CISA/FIPS principles, without FIPS or CISA certification claims.
+**Observed live tests:** Proxmox Debian 13 LXC bridge-published port 2222, FileZilla upload, matching host/container SHA-256 checksums, four Fail2Ban jails, actual SSH client IP detection, automated client ban preventing valid-auth SSH/SFTP connection, manual unban and healthy container.
+**Outstanding:** rebuild latest image to add OpenSSL CLI and test hardened SSH algorithms, new isolated config host-key provisioning, tailnet NAT/source-IP behavior, additional isolation and lifecycle tests; no published Docker Hub image yet.
+
 ## 2026-10-29 — OpenSSL diagnostics and explicit SSH algorithm profile
 **Modified:** `Dockerfile`, `defaults/sshd/sshd_config`, `doc/CHANGELOG.md`.
 **Observed:** Alpine edge OpenSSH 10.6p1 uses OpenSSL 3.5.9 libraries but `openssl` CLI is missing. SSHD effective defaults include SHA-1 MACs, CTR ciphers and more algorithms than the target hardened policy.
