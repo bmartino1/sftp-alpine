@@ -391,7 +391,8 @@ create_user() {
   chown root:root "/home/$username"
   chmod 755 "/home/$username"
 
-  # Reapply the current users.conf password on every container startup.\n  if [[ -n "${password:-}" ]]; then
+  # Reapply the current users.conf password on every container startup.
+  if [[ -n "${password:-}" ]]; then
     printf '%s:%s\n' "$username" "$password" | chpasswd $chpasswd_opt
   else
     usermod -p "*" "$username"
@@ -462,7 +463,8 @@ if $startSshd; then
       create_user "$line"
     done < "$userConfFinalPath"
   else
-    warn "No users provided; refusing to expose an unconfigured SFTP service."\n    exit 1
+    warn "No users provided; refusing to expose an unconfigured SFTP service."
+    exit 1
   fi
 fi
 
