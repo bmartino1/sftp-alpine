@@ -46,6 +46,7 @@ Fail2Ban uses persisted auth logs and a persistent SQLite ban database. The bund
 |---|---|---|
 | `TZ` | `America/Chicago` | Container timezone |
 | `AUTO_UPDATE` | `suite` | Upgrade packages from configured distro; `none` disables, `custom` invokes `/config/updateapps.sh` |
+| `AUTO_UPDATE_INTERVAL_HOURS` | `0` | Optional hourly-cadence unattended Alpine APK upgrades; `0` disables, changes to OpenSSH trigger restart-required log, not automatic restart |
 | `DEFAULT_ADMIN` | `true` | Seed admin only if users.conf is missing |
 | `ADMIN_USER` | `admin` | First-boot user |
 | `ADMIN_PASS` | unset | Required secure first-boot password |
@@ -57,6 +58,9 @@ Fail2Ban uses persisted auth logs and a persistent SQLite ban database. The bund
 | `LOG_STREAMS` | `auth,fail2ban` | Select streamed files |
 | `CLEAR_LOGS` | `false` | Archive and clear old logs if explicitly requested |
 | `DEBUG_TESTING` | `false` | Write debug configuration checks |
+
+## Build versus runtime versions
+The image records a package snapshot at `/opt/debug/build-versions.txt` during build. Docker startup logs report `pre-update` and `post-update` inventories; for Alpine, each line includes the installed APK revision (rather than assuming SSHD's upstream version alone proves security status). `AUTO_UPDATE=suite` runs before SSHD starts. Optional `AUTO_UPDATE_INTERVAL_HOURS=24` performs package upgrades in the background while the container is up, but **cannot hot-replace an already-running sshd**. If OpenSSH changes it logs `RESTART REQUIRED` and writes `/config/debug/restart-required.txt`. Other daemon/library upgrades may also require a restart. Use a disposable environment before enabling this on an exposed service.
 
 ## Verification
 Run these **after** starting an isolated test container:
