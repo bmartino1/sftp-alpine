@@ -2,7 +2,7 @@
 
 **Default base: Alpine Linux edge (rolling).** This project provides a password-capable, SFTP-only OpenSSH container with persistent configuration, Fail2Ban SSH abuse detection, optional WHOIS reporting, and bind-mounted user shares.
 
-> **Status:** experimental private development. The Alpine build, Fail2Ban firewall enforcement and FileZilla transfer behavior have not yet been integration-tested. This repository is not a published Docker Hub image, CISA certification or FIPS-validated product. The existing public `bmartino1/sftp2` and `bmmbmm01/sftp2:latest` remain separate.
+> **Status:** experimental private development. The Alpine test image was built and verified on a Debian 13 Proxmox LXC using FileZilla: password authentication, host bind-mount transfers, checksum integrity, four running Fail2Ban jails, automatic bans, real client blocking, and manual unbanning. The newer OpenSSL CLI and SSH algorithm policy remain pending rebuild and regression testing. This repository is not a published Docker Hub image, CISA certification or FIPS-validated product. The existing public `bmartino1/sftp2` and `bmmbmm01/sftp2:latest` remain separate.
 
 ## Why Alpine edge?
 The project previously used Debian because its packages and Fail2Ban/WHOIS integration were familiar and dependable. Alpine edge now offers a packaged `whois` client from the **community** repository, as well as newer rolling OpenSSH packages. The default Dockerfile installs Bash so the Bash entrypoint can be retained. It uses `apk upgrade --available` during build and at startup when `AUTO_UPDATE=suite`.
@@ -40,6 +40,15 @@ Persistent state is stored under `/config`: `sshd/sshd_config`, `sshd/users.conf
 `ForceCommand internal-sftp` enforces SFTP-only operations. FileZilla remains the target client. The standard profile uses password authentication and is **not FIPS-certified**; FIPS crypto requires a separate evaluated build and validated provider.
 
 Fail2Ban uses persisted auth logs and a persistent SQLite ban database. The bundled jails are `sshd`, `sshd-cipher-mismatch`, `sshd-banner-fail`, and `recidive`. WHOIS appends ban enrichment to `/config/log/whois.log`. No email is sent by default. Existing `/config/fail2ban/jail.d/*.local` files may override newer defaults: review effective settings before migration.
+
+## Intended private home-lab deployment (Tailscale)
+The target distribution is a **private Docker Hub Alpine tag** for the operator and trusted friends. Clients include FileZilla on PCs, NAS hosts, or other Docker hosts over a Tailscale tailnet. Tailscale membership and access policies are the first network boundary; OpenSSH still provides independent server authentication and encrypted SFTP transport. Keep port publishing limited to the intended LAN or Tailscale interface (container port 22 is not necessarily published as host port 22).
+
+The standard profile is **hardened, not FIPS-validated and not CISA-certified**. CISA Secure by Design guidance and FIPS-approved algorithm principles are references for design and testing, not claims of certification. Ed25519/RSA-4096 host keys and modern negotiated encryption are retained for FileZilla compatibility. SSH host keys are created on first boot and persisted under `/config/sshd/keys`; never bake keys or passwords into images. Reusing `/config` preserves trusted fingerprints; a new `/config` intentionally creates a new server identity that clients must verify.
+
+**Fail2Ban network caveat:** It only bans source IPs visible to SSHD. Tailscale subnet routing, source NAT or Docker bridges may mask the individual client IP. Test with actual tailnet clients and avoid banning a shared gateway or router; an earlier LAN IP ban test does not prove all Tailscale topologies.
+
+**Upgrades:** Use tagged images, pull/build and controlled recreation rather than assuming periodic APK upgrades restart existing daemons. Preserve `/config` and host-mounted share directories; never delete production state to deploy a new version. Review SSH crypto config in `/config/sshd/sshd_config`, since persisted copies are not overwritten by revised image defaults.
 
 ## Configuration variables
 | Variable | Default | Meaning |
