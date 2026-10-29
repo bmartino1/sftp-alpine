@@ -95,6 +95,16 @@ Changes to this private repository are recorded here, including documentation-on
 **Limitations:** removing users from config does not automatically delete users, preexisting custom SSHD AllowUsers may exclude new users, env credentials are observable to Docker administrators. Build/integration tests not run; existing production untouched.
 **Status:** experimental private repository; test before public release.
 
+## 2026-10-29 — Reconcile default Docker build with Alpine edge
+**Modified:** `Dockerfile`, `entrypoint.sh`, `doc/CHANGELOG.md`.
+**Added:** `Dockerfile.debian` (retains previous Debian alternative, with malformed escaped Dockerfile lines normalized).
+**Default build:** `Dockerfile` now uses `FROM alpine:edge`, installs Bash, OpenSSH server/client/SFTP, Fail2Ban, rsyslog, WHOIS, iptables/nftables and prerequisites through APK. Runs `apk upgrade --available` at build; startup updater can repeat at container boot. Uses Alpine tini path, existing healthcheck, and diagnostic scripts.
+**Entrypoint fixes:** Alpine version reporting, Alpine nologin path, avoid recursive permissions/ownership rewriting within persistent /config, prevent copying jail.local again into jail.d/jail.local, reject empty user list at startup. User creation, password rotation, host keys and existing mounts retain previous intended semantics.
+**Limitations and outstanding issues:** Existing /config is never automatically migrated; old Fail2Ban jail.d overrides may remain. No automatic CVE verdict, running-daemon hot-patching, FIPS validation, or scheduled in-process update. Build and live network/firewall/FileZilla testing have not been performed. New DEFAULT_ADMIN requires explicit ADMIN_PASS on first boot, not admin/admin. No production or public repo changes.
+**Validation:** static file review only. No Docker daemon available in assistant runtime; check `docker build --pull -t sftp-private:edge-test .` and test isolated port/config.
+**Rollback:** use last known-good deployed image and backed-up /config; older Debian path: `docker build -f Dockerfile.debian .`.
+**Status:** private development / pending integration tests.
+
 ## Required format for future entries
 - Date/time (UTC), author/agent, purpose and issue/PR
 - Added/modified/deleted paths, with exact behavior differences
