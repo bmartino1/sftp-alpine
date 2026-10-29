@@ -11,7 +11,7 @@ Private development and review workspace for the public `bmartino1/sftp2` projec
 
 ## Documents
 - [CHANGELOG.md](CHANGELOG.md) — chronological audit of edits
-- [SECURITY-REVIEW.md](SECURITY-REVIEW.md) — initial architecture, risks, test plan and references
+- [SECURITY-REVIEW.md](SECURITY-REVIEW.md) — initial architecture, risks, test plan and references\n- [USER-MANAGEMENT.md](USER-MANAGEMENT.md) — user lifecycle and host shares\n- [ALPINE-FIPS-PLAN.md](ALPINE-FIPS-PLAN.md) — experimental rolling-build migration\n- [THIRD-PARTY-LICENSES.md](THIRD-PARTY-LICENSES.md) — packaged components and licensing obligations
 
 ## Development workflow
 1. Capture baseline and reproduce.
