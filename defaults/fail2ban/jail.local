@@ -16,6 +16,8 @@ action = %(banaction)s[name=%(__name__)s, port="%(port)s", protocol="tcp"]
          logwhois[logpath=/config/log/whois.log]
 
 [sshd]
+# Override Alpine's packaged sshd jail backend=systemd; container uses auth.log.
+backend = polling
 enabled = true
 port = 22
 filter = sshd
