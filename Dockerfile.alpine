@@ -1,8 +1,8 @@
-# Experimental Alpine build. Not production-validated or FIPS certified.
-FROM alpine:3.23
+# Experimental Alpine edge rolling build. Not production-validated or FIPS certified.
+FROM alpine:edge
 LABEL org.opencontainers.image.title="sftp-private-alpine-experimental"
 ENV TZ=UTC AUTO_UPDATE=suite DEFAULT_ADMIN=false
-RUN apk add --no-cache bash tini openssh-server openssh-client openssh-sftp-server \
+RUN apk update && apk upgrade --available && apk add --no-cache bash tini openssh-server openssh-client openssh-sftp-server \
   fail2ban rsyslog whois iptables nftables tzdata ca-certificates curl \
   coreutils findutils grep sed gawk shadow util-linux procps iproute2 \
   && mkdir -p /defaults/sshd /defaults/fail2ban/jail.d /defaults/fail2ban/filter.d \
