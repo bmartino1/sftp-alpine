@@ -1,3 +1,6 @@
+## 2026-10-29 — Defense-in-depth SFTP forwarding restriction
+**Modified:** default sshd configuration and security audit. Windows OpenSSH shell test authenticated and reported `PTY allocation request failed on channel 0`; this confirms denied PTY allocation, not independently denial of all forwarded TCP channels. Existing settings denied TCP, agent, X11 and tunnels, while effective `DisableForwarding` remained `no`. Set `DisableForwarding yes` explicitly and check it in `validate-security.sh`. Test `ssh -N -L ... -o ExitOnForwardFailure=yes` with an attempted connection through the forward; local listener establishment alone is not proof that the server accepted a forwarding channel. Runtime re-test pending; persisted sshd configs must be updated separately.
+
 ## 2026-10-29 — Fix false negative SSHD security audit on Alpine OpenSSH 10.6
 **Modified:** `scripts/validate-security.sh` and changelog. Fresh config Alpine runtime was healthy, `sshd -t` passed, and FileZilla authenticated and uploaded four files with restricted cryptographic algorithms, but the audit emitted 13 false failures because `sshd -T` option names are mixed case and the awk lookup was case sensitive. Match SSHD option names case insensitively. Runtime revalidation pending, with no SSHD configuration or firewall changes in this fix.
 
