@@ -305,6 +305,15 @@ ln -sfn /config/sshd/keys/ssh_host_ed25519_key /etc/ssh/ssh_host_ed25519_key
 ln -sfn /config/sshd/keys/ssh_host_rsa_key     /etc/ssh/ssh_host_rsa_key
 chmod 600 /etc/ssh/ssh_host_*_key
 
+# ===== Alpine OpenSSH compatibility =====
+# The Alpine package is compiled without PAM; remove unsupported directive
+# from the active runtime config, including older persisted /config copies.
+# Keep persistent user settings intact; the next startup regenerates /etc.
+if command -v apk >/dev/null 2>&1 && grep -qE '^[[:space:]]*UsePAM[[:space:]]+' /etc/ssh/sshd_config; then
+  log "Alpine sshd lacks UsePAM; removing unsupported runtime directive"
+  sed -i -E '/^[[:space:]]*UsePAM[[:space:]]+/d' /etc/ssh/sshd_config
+fi
+
 # ===== optional sshd toggles =====
 if [[ -n "${PASSWORD_AUTH:-}" ]]; then
   if grep -qE '^[# ]*PasswordAuthentication[[:space:]]+' /etc/ssh/sshd_config; then
