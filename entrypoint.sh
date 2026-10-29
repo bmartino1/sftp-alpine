@@ -268,6 +268,7 @@ chmod 0600 /etc/ssh/sshd_config || true
 
 # ===== version banners =====
 [[ -f /opt/debug/build-versions.txt ]] && { info "Application versions at build step:"; sed 's/^/[info]   /' /opt/debug/build-versions.txt; }
+if [[ -x /usr/local/bin/report-versions.sh ]]; then /usr/local/bin/report-versions.sh pre-update; fi
 print_versions "Application versions at container start:"
 
 # ===== updates (default NONE) =====
@@ -294,6 +295,7 @@ case "$mode" in
 esac
 
 print_versions "Application versions after update:"
+if [[ -x /usr/local/bin/report-versions.sh ]]; then /usr/local/bin/report-versions.sh post-update; fi
 
 # ===== SSH host keys (persist) + link to /etc/ssh =====
 [[ -f /config/sshd/keys/ssh_host_ed25519_key ]] || { ssh-keygen -t ed25519 -f /config/sshd/keys/ssh_host_ed25519_key -N ''; }
