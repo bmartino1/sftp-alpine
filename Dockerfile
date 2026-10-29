@@ -3,7 +3,7 @@ FROM alpine:edge
 LABEL org.opencontainers.image.title="sftp-private-alpine-experimental"
 ENV TZ=America/Chicago AUTO_UPDATE=suite DEFAULT_ADMIN=true
 RUN apk update && apk upgrade --available && apk add --no-cache bash tini openssh-server openssh-client openssh-sftp-server \
-  fail2ban rsyslog whois iptables nftables tzdata ca-certificates curl \
+  fail2ban rsyslog whois iptables nftables tzdata ca-certificates curl openssl \
   coreutils findutils grep sed gawk shadow util-linux procps iproute2 \
   && mkdir -p /defaults/sshd /defaults/fail2ban/jail.d /defaults/fail2ban/filter.d \
      /defaults/fail2ban/action.d /etc/rsyslog.d /var/run/sshd \
@@ -11,6 +11,7 @@ RUN apk update && apk upgrade --available && apk add --no-cache bash tini openss
   && rm -f /etc/ssh/ssh_host_*key* \
   && command -v whois \
   && command -v sshd \
+  && command -v openssl \
   && command -v fail2ban-client
 RUN printf 'auth,authpriv.*\t/config/log/auth.log\n' > /etc/rsyslog.d/00-auth.conf
 COPY defaults/sshd/ /defaults/sshd/
