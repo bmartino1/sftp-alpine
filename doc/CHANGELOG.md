@@ -74,6 +74,14 @@ Changes to this private repository are recorded here, including documentation-on
 **Rollback:** revert private repo commits; back up /config and run on isolated test mounts.
 **Status:** requires test before public/production use.
 
+## 2026-10-29 — Consolidate default Fail2Ban jails and add diagnostics
+**Modified:** `defaults/fail2ban/jail.local`, `defaults/fail2ban/jail.d/00-sshd.local`, `defaults/fail2ban/jail.d/10-sshd-extras.local`, `doc/CHANGELOG.md`.
+**Added:** `scripts/audit-fail2ban.sh` (read-only runtime jail, regex and firewall inspection).
+**Behavior:** SSHD, cipher mismatch, banner failure and recidive have single bundled definitions in jail.local. Default IP exemption only localhost, with explicit allports recidive action and no email. Existing WHOIS action retained. No default LAN trust networks added. Fail2Ban .local files under jail.d load *after* jail.local, so the old overrides are comment-only for new deployments.
+**Critical migration:** this does not update already-populated `/config/fail2ban` files. The operator's production `jail.d/jail.local`, `00-sshd.local`, and extras still override root `jail.local`; back up and consolidate them separately before deploying. Runtime DNS/WHOIS and ban timing may change if migrated.
+**Validation:** static code review only; **not** validated using Fail2Ban binary or live packet enforcement. Run `fail2ban-client -t` and audit on a disposable container; verify ban/unban, recidive, action expansion and restart persistence before production. An extra jail action may have distribution-specific requirements.
+**Status:** private experimental, not production-validated.
+
 ## Required format for future entries
 - Date/time (UTC), author/agent, purpose and issue/PR
 - Added/modified/deleted paths, with exact behavior differences
