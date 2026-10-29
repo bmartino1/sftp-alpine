@@ -1,3 +1,9 @@
+## 2026-10-29 — OpenSSL diagnostics and explicit SSH algorithm profile
+**Modified:** `Dockerfile`, `defaults/sshd/sshd_config`, `doc/CHANGELOG.md`.
+**Observed:** Alpine edge OpenSSH 10.6p1 uses OpenSSL 3.5.9 libraries but `openssl` CLI is missing. SSHD effective defaults include SHA-1 MACs, CTR ciphers and more algorithms than the target hardened policy.
+**Changes:** Install Alpine `openssl` CLI and assert presence at build. New default SSHD profile prefers ML-KEM/SNTRUP hybrid key exchange and allows Curve25519 and ECDH P-256 fallback; limits ciphers to ChaCha20-Poly1305 / AES-GCM and MACs to SHA-2 encrypt-then-MAC; restricts server host-key algorithms to ED25519 / RSA SHA-2. Existing first-boot ED25519 and RSA-4096 host keys are preserved, not regenerated.
+**Migration and risks:** Existing persisted `/config/sshd/sshd_config` is never overwritten; new algorithm defaults will not apply until explicitly reviewed/merged into persisted config. This is not a FIPS build, FIPS-approved algorithm list, or FIPS certification. Validate with `sshd -t`, `sshd -T`, and FileZilla before release. Runtime not yet retested after commit.
+
 # Change Log — sftp-private
 
 Changes to this private repository are recorded here, including documentation-only changes. Dates are UTC unless otherwise stated.
