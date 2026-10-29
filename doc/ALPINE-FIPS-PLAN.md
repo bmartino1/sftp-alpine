@@ -1,9 +1,9 @@
 # Alpine migration and FIPS research
 
 ## Experimental Alpine build
-- `Dockerfile.alpine` uses Alpine v3.23 **stable**, not `edge`; its packaged OpenSSH version may be older than upstream 10.6.
+- `Dockerfile.alpine` uses `alpine:edge` **rolling**, with edge/main and edge/community as the distro repositories. OpenSSH 10.6_p1-r1 was listed for edge on 2026-10-29. Packages are not pinned and can change between builds.
 - Includes Bash deliberately to preserve the existing Bash entrypoint. Alpine package and process conventions still differ from Debian: rsyslog configuration, `fail2ban` filters/actions distribution, package file paths, `shadow` user tools and firewall backend must be verified.
-- Build only in a disposable environment: `docker build -f Dockerfile.alpine -t sftp-private:alpine-test .`
+- The base image is mutable: a container's startup `apk upgrade --available` applies published package changes to its writable layer before sshd starts; it does **not** continuously update or replace a running sshd. Restarting the *same* container repeats the upgrade; recreating from an old image starts from that image again. Maintain a previous known-good image for rollback. Do not mix stable and edge repositories.\n- Build only in a disposable environment: `docker build -f Dockerfile.alpine -t sftp-private:alpine-test .`
 - Start with a **new** empty test `/config`, explicit credentials and a nonproduction host port. Never mount production host keys, credentials, or SFTP data into this experiment.
 - Run `bash -n /usr/local/bin/entrypoint.sh`, `/usr/local/bin/validate-security.sh`, `/usr/local/bin/security-status.sh` and `/usr/local/bin/healthcheck.sh`.
 - Independently test login success/failure, shell denial, file transfers, user chroots, host-key persistence, rsyslog collection, the three SSH-related Fail2Ban filters, ban/unban, IPv6, firewall network mode, container restart and rollback.
