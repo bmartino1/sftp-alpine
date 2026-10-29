@@ -89,6 +89,12 @@ Changes to this private repository are recorded here, including documentation-on
 **Testing:** source edit only; no Alpine build, `bash -n`, real mount permission test or FileZilla transfer has been performed. Check in isolated test before prod. Do not enable opt-in ownership mode on /VMs until impact reviewed.
 **Status:** private untested.
 
+## 2026-10-29 — Authoritative users.conf lifecycle
+**Modified:** `entrypoint.sh`, `doc/CHANGELOG.md`. **Added:** `doc/USER-MANAGEMENT.md`.
+**Behavior:** on startup, create missing users, reapply password/hash for existing users, reject UID/GID drift, preserve chroot and existing mount permissions. Missing users.conf can seed an admin account only with explicitly provided non-placeholder ADMIN_PASS; `DEFAULT_ADMIN` defaults true but this now refuses to start when missing config and missing password. Existing file wins over env settings; password changes require restart. No default admin/admin credentials committed.
+**Limitations:** removing users from config does not automatically delete users, preexisting custom SSHD AllowUsers may exclude new users, env credentials are observable to Docker administrators. Build/integration tests not run; existing production untouched.
+**Status:** experimental private repository; test before public release.
+
 ## Required format for future entries
 - Date/time (UTC), author/agent, purpose and issue/PR
 - Added/modified/deleted paths, with exact behavior differences
