@@ -8,7 +8,10 @@ RUN apk update && apk upgrade --available && apk add --no-cache bash tini openss
   && mkdir -p /defaults/sshd /defaults/fail2ban/jail.d /defaults/fail2ban/filter.d \
      /defaults/fail2ban/action.d /etc/rsyslog.d /var/run/sshd \
      /var/run/fail2ban /var/spool/rsyslog /config/log /opt/debug \
-  && rm -f /etc/ssh/ssh_host_*key*
+  && rm -f /etc/ssh/ssh_host_*key* \
+  && command -v whois \
+  && command -v sshd \
+  && command -v fail2ban-client
 RUN printf 'auth,authpriv.*\t/config/log/auth.log\n' > /etc/rsyslog.d/00-auth.conf
 COPY defaults/sshd/ /defaults/sshd/
 COPY defaults/fail2ban/ /defaults/fail2ban/
