@@ -124,7 +124,8 @@ smart_copy() {
 
 smart_copy /config/sshd/sshd_config        /etc/ssh/sshd_config
 smart_copy /config/fail2ban/fail2ban.local /etc/fail2ban/fail2ban.local
-smart_copy /config/fail2ban/jail.local     /etc/fail2ban/jail.d/jail.local
+
+# Avoid duplicating root jail.local under jail.d: its overrides would load twice.
 
 # ===== rsyslog: disable imklog noise in containers =====
 if [[ "${DISABLE_IMKLOG:-true}" == "true" ]]; then
@@ -396,7 +397,7 @@ create_user() {
 
   local key_file="/config/userkeys/${username}.pub"
   if [[ -f "$key_file" ]]; then
-    chown "$(id -u "$username")" "/home/$username/.ssh"
+    chown "$(id -u "$username"):$(id -g "$username")" "/home/$username/.ssh"
     chmod 700 "/home/$username/.ssh"
     install -m 0600 "$key_file" "/home/$username/.ssh/${username}.pub"
     install -m 0600 "$key_file" "/home/$username/.ssh/authorized_keys"
@@ -459,7 +460,7 @@ if $startSshd; then
       create_user "$line"
     done < "$userConfFinalPath"
   else
-    warn "No users provided; /config/sshd/users.conf is empty. See README for format."
+    warn "No users provided; refusing to expose an unconfigured SFTP service."\n    exit 1
   fi
 fi
 
