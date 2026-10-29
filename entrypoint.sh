@@ -397,17 +397,52 @@ create_user() {
     log "Installed SSH key for $username"
   fi
 
+  # Chroot root must remain root-owned and non-writable to the SFTP account.
+  # Set only the chroot directory itself; never traverse its mounted contents.
+  chown root:root "/home/$username"
+  chmod 0755 "/home/$username"
+
+  # Create requested share directories; inspect existing bind mounts too.
+  local -a shares=()
   if [[ -n "${dirs:-}" ]]; then
-    IFS=',' read -r -a arr <<<"$dirs"
-    local ugid
-    ugid="$(id -g "$username")"
-    for sub in "${arr[@]}"; do
-      [[ -z "$sub" ]] && continue
-      mkdir -p "/home/$username/$sub"
-      # Do not recursively chown a host bind mount or users\x27 existing data.\n      if ! mountpoint -q "/home/$username/$sub"; then\n        if [[ -z "$(ls -A "/home/$username/$sub" 2>/dev/null)" ]]; then\n          chown "$(id -u "$username"):$ugid" "/home/$username/$sub"\n        fi\n      fi
-      log "Ensured /home/$username/$sub"
-    done
+    IFS=',' read -r -a shares <<<"$dirs"
   fi
+  for present in "/home/$username"/*; do
+    [[ -d "$present" && ! -L "$present" ]] || continue
+    [[ "${present##*/}" == ".ssh" ]] && continue
+    shares+=("${present##*/}")
+  done
+
+  local sub target ugid created
+  ugid="$(id -g "$username")"
+  for sub in "${shares[@]}"; do
+    [[ -n "$sub" ]] || continue
+    # Only direct children of a user home are accepted here.
+    if [[ "$sub" == "." || "$sub" == ".." || "$sub" == */* || "$sub" == *..* || "$sub" == ".ssh" ]]; then
+      warn "Unsafe share directory for $username; skipping"
+      continue
+    fi
+    target="/home/$username/$sub"
+    [[ ! -L "$target" ]] || { warn "Refusing symlink share $target"; continue; }
+    created=false
+    if [[ ! -e "$target" ]]; then
+      mkdir -- "$target"
+      created=true
+    fi
+    if [[ "$created" == true ]]; then
+      chown "$(id -u "$username"):$ugid" "$target"
+      chmod 2770 "$target"
+      log "Created $target with group-sharing mode 2770"
+    elif [[ "${SHARE_MOUNT_PERMS:-check}" == "group" ]]; then
+      # Explicit opt-in: affects the share root, including bind mount roots,
+      # but never recursively alters any mounted data.
+      chown "$(id -u "$username"):$ugid" "$target"
+      chmod 2770 "$target"
+      log "Applied opt-in group permissions to $target (nonrecursive)"
+    else
+      log "Preserving existing share permissions: $target ($(stat -c '%u:%g %a' "$target"))"
+    fi
+  done
 }
 
 if $startSshd; then
