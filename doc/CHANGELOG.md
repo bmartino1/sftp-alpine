@@ -1,3 +1,6 @@
+## 2026-10-29 — Fix false negative SSHD security audit on Alpine OpenSSH 10.6
+**Modified:** `scripts/validate-security.sh` and changelog. Fresh config Alpine runtime was healthy, `sshd -t` passed, and FileZilla authenticated and uploaded four files with restricted cryptographic algorithms, but the audit emitted 13 false failures because `sshd -T` option names are mixed case and the awk lookup was case sensitive. Match SSHD option names case insensitively. Runtime revalidation pending, with no SSHD configuration or firewall changes in this fix.
+
 ## 2026-10-29 — Private Tailscale home-lab deployment and testing scope
 **Modified:** `README.md`, `doc/CHANGELOG.md`.
 **Target:** private Docker Hub Alpine image for authorized friends using FileZilla, NAS and Docker SFTP clients over Tailscale. Hardened security controls guided by CISA/FIPS principles, without FIPS or CISA certification claims.
