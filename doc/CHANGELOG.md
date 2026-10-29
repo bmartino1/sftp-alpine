@@ -144,6 +144,13 @@ Changes to this private repository are recorded here, including documentation-on
 **Critical migration:** Existing `/config/fail2ban/jail.local` and `jail.d` are not overwritten. Existing test configurations must be individually patched or separately reset; user secrets and SSH host keys must be preserved.
 **Validation:** previously captured Fail2Ban dry-run showed sshd was systemd and the other three were polling. New all-jail overrides are committed, but rebuild, full startup and firewall enforcement remain unverified. Keep SSHD fail closed.
 
+## 2026-10-29 — Alpine OpenSSH UsePAM incompatibility discovered in live LXC
+**Modified:** `defaults/sshd/sshd_config`, `entrypoint.sh`, `doc/CHANGELOG.md`.
+**Observed:** Alpine edge OpenSSH 10.6p1 logs `Unsupported option UsePAM` at line 52. Editing bind-mounted `/config/sshd/sshd_config` did not fix the running `/etc/ssh/sshd_config`, because earlier entrypoint sed -i runtime modifications replace the original symlink with a separate config file.
+**Fix:** omit `UsePAM no` from Alpine default and remove that unsupported directive from the active runtime `/etc/ssh/sshd_config` during startup on Alpine, even when old persisted configs still contain it. Do not rewrite the persisted config automatically.
+**Security and further work:** no PAM is enabled on Alpine. Validate `sshd -t` and actual password/SFTP session after rebuild. Four Fail2Ban jails start with polling, but empty iptables/nft rules before first ban do not establish whether actions can enforce; test manual ban, packet blocking, and startup security gates. Investigate whether all /etc config writes should be explicitly staged to avoid broken symlinks.
+**Validation:** source change only, not yet rebuilt in test LXC.
+
 ## Required format for future entries
 - Date/time (UTC), author/agent, purpose and issue/PR
 - Added/modified/deleted paths, with exact behavior differences
