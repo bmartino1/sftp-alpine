@@ -26,6 +26,22 @@ Changes to this private repository are recorded here, including documentation-on
 **Validation:** production snippets supplied by operator, public OpenSSH/Debian advisory review; **not** a live container inspection or repeat of operator's ban tests.
 **Status:** documentation-only; proposed hardening awaits review and controlled testing.
 
+## 2026-10-29 — SSHD baseline hardening and security preflight
+**Purpose:** establish safer, testable defaults while preserving password-based SFTP and proven firewall ban actions.
+
+**Modified:**
+- `defaults/sshd/sshd_config` — bound `LoginGraceTime` to 20s; set `MaxAuthTries 3`, `MaxSessions 1`, `MaxStartups 10:30:30`; explicitly disable PAM, keyboard-interactive/public-key authentication, TTY and user environment; configure internal-sftp AUTHPRIV INFO logging. Password authentication remains enabled; existing user restriction and crypto choice are not rewritten.
+- `Dockerfile` — install the read-only security validation script in the image.
+- `doc/CHANGELOG.md` — this change record.
+- `doc/SECURITY-REVIEW.md` — test coverage and rollout cautions.
+**Added:**
+- `scripts/validate-security.sh` — validate sshd syntax/effective settings and report Fail2Ban configuration/daemon readiness without modifying runtime.
+
+**Unchanged:** `entrypoint.sh`, `update-inplace.sh`, Fail2Ban filters/actions and jail defaults, production `/config` files, public repo.
+**Testing:** static source checks only; no Docker build or connected Proxmox instance available. Run `bash -n /usr/local/bin/validate-security.sh` and `bash /usr/local/bin/validate-security.sh` inside a rebuilt private image. Script validates a specific password-only profile, not every optional deployment profile. It warns (does not fail) when Fail2Ban is unavailable, because this pass focuses on SSHD configuration.
+**Deployment/rollback:** defaults are seeded only when `/config/sshd/sshd_config` is absent; existing persistent configs remain unchanged. Backup live config, compare, validate offline, then deploy explicitly. Revert these commits to restore old defaults; restart from last tested image if needed.
+**Status:** private development only, not yet integration-tested or ready for public release.
+
 ## Required format for future entries
 - Date/time (UTC), author/agent, purpose and issue/PR
 - Added/modified/deleted paths, with exact behavior differences
