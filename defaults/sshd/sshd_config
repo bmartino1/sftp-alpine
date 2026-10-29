@@ -49,7 +49,7 @@ PermitRootLogin no
 PasswordAuthentication yes
 KbdInteractiveAuthentication no
 PubkeyAuthentication no
-UsePAM no
+# Alpine OpenSSH is built without PAM support; do not set UsePAM.
 PermitTTY no
 PermitUserEnvironment no
 X11Forwarding no
