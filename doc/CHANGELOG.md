@@ -57,6 +57,14 @@ Changes to this private repository are recorded here, including documentation-on
 **Known limits:** a responding jail does not prove iptables/nftables packet enforcement; that requires integration testing. In production test with an alternate port and known-good fallback before deploying. No live build or runtime tests performed.
 **Status:** private experimental change, not yet production-validated.
 
+## 2026-10-29 — Select Alpine edge for rolling OpenSSH packages
+**Modified:** `Dockerfile.alpine`, `doc/ALPINE-FIPS-PLAN.md`, `doc/CHANGELOG.md`.
+**Behavior:** Alpine build now starts with `alpine:edge` and refreshes/upgrades APK packages before installing SFTP dependencies. Runtime `AUTO_UPDATE=suite` already selects `apk update` and `apk upgrade --available` for Alpine.
+**Reason:** as checked 2026-10-29, Alpine edge main packages OpenSSH `10.6_p1-r1`; this cannot guarantee future security fixes are released immediately.
+**Testing:** repository edit only; Docker build and startup, WHOIS availability, Fail2Ban enforcement, SFTP login and rollback remain unverified.
+**Caution:** rolling packages can introduce regressions; upgrades only become effective for SSHD when the daemon is (re)started. Existing /config state must be backed up. No changes to production or public repository.
+**Status:** experimental development.
+
 ## Required format for future entries
 - Date/time (UTC), author/agent, purpose and issue/PR
 - Added/modified/deleted paths, with exact behavior differences
