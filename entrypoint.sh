@@ -47,16 +47,16 @@ mkdir -p \
   /var/run/sshd /var/run/fail2ban /var/log /opt/debug
 
 # ===== default admin (first boot) =====
-DEFAULT_ADMIN="${DEFAULT_ADMIN:-false}"
+DEFAULT_ADMIN="${DEFAULT_ADMIN:-true}"
 ADMIN_USER="${ADMIN_USER:-admin}"
 ADMIN_PASS="${ADMIN_PASS:-}"
 ADMIN_UID="${ADMIN_UID:-1000}"
 ADMIN_GID="${ADMIN_GID:-100}"
 
-if [[ ! -s /config/sshd/users.conf ]]; then
+if [[ ! -e /config/sshd/users.conf ]]; then
   if [[ "${DEFAULT_ADMIN,,}" == "true" ]]; then
     [[ "$ADMIN_UID" =~ ^[0-9]+$ && "$ADMIN_GID" =~ ^[0-9]+$ ]] || { warn "ADMIN_UID/ADMIN_GID must be numeric"; exit 1; }
-    if [[ -z "$ADMIN_PASS" || "$ADMIN_PASS" == "password" || "$ADMIN_PASS" == "change-me-now" ]]; then
+    if [[ -z "$ADMIN_PASS" || "$ADMIN_PASS" == "password" || "$ADMIN_PASS" == "admin" || "$ADMIN_PASS" == "change-me-now" ]]; then
       warn "DEFAULT_ADMIN=true requires a non-placeholder ADMIN_PASS; refusing insecure first boot"
       exit 1
     fi
@@ -65,9 +65,9 @@ if [[ ! -s /config/sshd/users.conf ]]; then
 # seeded on first boot — CHANGE THIS PASSWORD!
 ${ADMIN_USER}:${ADMIN_PASS}:${ADMIN_UID}:${ADMIN_GID}
 EOF
-    log "Seeded /config/sshd/users.conf with default admin (CHANGE THE PASSWORD)"
+    log "Seeded /config/sshd/users.conf with explicitly configured admin credentials"
   else
-    install -D -m 0644 /dev/stdin /config/sshd/users.conf <<'EOF'
+    install -D -m 0600 /dev/stdin /config/sshd/users.conf <<'EOF'
 # username:password[:e][:uid][:gid][:dir1,dir2,...]
 # file created on first boot; add your users here
 EOF
@@ -372,19 +372,26 @@ create_user() {
   fi
 
   if getent passwd "$username" >/dev/null; then
-    log "User $username exists; skipping useradd"
+    # Existing user: refuse silent identity drift on mounted storage.
+    if [[ -n "$uid" && "$(id -u "$username")" != "$uid" ]] ||
+       [[ -n "$gid" && "$(id -g "$username")" != "$gid" ]]; then
+      warn "UID/GID mismatch for $username: existing identity differs from users.conf; refusing automatic migration"
+      return 1
+    fi
+    log "User $username exists; syncing configured credentials"
   else
-    useradd "${useradd_opts[@]}" "$username"
+    useradd -M -d "/home/$username" -s /usr/sbin/nologin "${useradd_opts[@]}" "$username"
+    log "Created SFTP user $username"
   fi
 
   mkdir -p "/home/$username/.ssh"
   chown root:root "/home/$username"
   chmod 755 "/home/$username"
 
-  if [[ -n "${password:-}" ]]; then
-    echo "$username:$password" | chpasswd $chpasswd_opt
+  # Reapply the current users.conf password on every container startup.\n  if [[ -n "${password:-}" ]]; then
+    printf '%s:%s\n' "$username" "$password" | chpasswd $chpasswd_opt
   else
-    usermod -p "*" "$username" || true
+    usermod -p "*" "$username"
   fi
 
   local key_file="/config/userkeys/${username}.pub"
