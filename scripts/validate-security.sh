@@ -11,7 +11,9 @@ command -v sshd >/dev/null || { fail 'sshd not installed'; exit 1; }
 if ! sshd -t -f "$config"; then fail 'sshd -t failed'; exit 1; fi
 pass 'sshd syntax and host keys checked'
 effective="$(sshd -T -f "$config")" || { fail 'sshd -T failed'; exit 1; }
-get() { awk -v k="$1" '$1==k {$1=""; sub(/^ /,""); print; exit}' <<<"$effective"; }
+# OpenSSH 10.6 may print mixed-case option names in sshd -T output.
+# Match option names case-insensitively while preserving the setting value.
+get() { awk -v k="$1" 'tolower($1)==tolower(k) {$1=""; sub(/^ /,""); print; exit}' <<<"$effective"; }
 expect() { local key="$1" wanted="$2" actual; actual="$(get "$key")"; [[ "$actual" == "$wanted" ]] && pass "$key=$wanted" || fail "$key expected '$wanted', got '$actual'"; }
 expect permitrootlogin no
 expect passwordauthentication yes
