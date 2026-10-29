@@ -16,7 +16,7 @@ RUN printf 'auth,authpriv.*\t/config/log/auth.log\n' > /etc/rsyslog.d/00-auth.co
 COPY defaults/sshd/ /defaults/sshd/
 COPY defaults/fail2ban/ /defaults/fail2ban/
 COPY entrypoint.sh update-inplace.sh /usr/local/bin/
-COPY scripts/validate-security.sh scripts/healthcheck.sh scripts/security-status.sh scripts/report-versions.sh /usr/local/bin/
+COPY scripts/validate-security.sh scripts/healthcheck.sh scripts/security-status.sh scripts/report-versions.sh scripts/periodic-update.sh /usr/local/bin/
 RUN chmod 0755 /usr/local/bin/*.sh && \
     /usr/local/bin/report-versions.sh build > /opt/debug/build-versions.txt 2>&1
 VOLUME ["/config"]
