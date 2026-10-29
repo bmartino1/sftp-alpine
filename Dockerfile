@@ -16,9 +16,9 @@ RUN printf 'auth,authpriv.*\t/config/log/auth.log\n' > /etc/rsyslog.d/00-auth.co
 COPY defaults/sshd/ /defaults/sshd/
 COPY defaults/fail2ban/ /defaults/fail2ban/
 COPY entrypoint.sh update-inplace.sh /usr/local/bin/
-COPY scripts/validate-security.sh scripts/healthcheck.sh scripts/security-status.sh /usr/local/bin/
+COPY scripts/validate-security.sh scripts/healthcheck.sh scripts/security-status.sh scripts/report-versions.sh /usr/local/bin/
 RUN chmod 0755 /usr/local/bin/*.sh && \
-    { ssh -V 2>&1; apk info -v openssh-server fail2ban whois; } > /opt/debug/build-versions.txt 2>&1
+    /usr/local/bin/report-versions.sh build > /opt/debug/build-versions.txt 2>&1
 VOLUME ["/config"]
 EXPOSE 22
 HEALTHCHECK --interval=30s --timeout=8s --start-period=30s --retries=3 CMD ["/usr/local/bin/healthcheck.sh"]
