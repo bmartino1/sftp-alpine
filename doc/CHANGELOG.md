@@ -115,6 +115,14 @@ Changes to this private repository are recorded here, including documentation-on
 **Deployment:** public repository and production image unchanged; no credentials added.
 **Status:** development review pending.
 
+## 2026-10-29 — Alpine version provenance and opt-in periodic package upgrades
+**Added:** `scripts/report-versions.sh` (build/pre-update/post-update/periodic package version inventory), `scripts/periodic-update.sh` (opt-in unattended APK upgrades and restart-required notice).
+**Modified:** `Dockerfile` (include scripts; build version stamp via report-versions), `entrypoint.sh` (log versions before and after startup updates; optionally run periodic updater), `doc/CHANGELOG.md`.
+**Settings:** `AUTO_UPDATE=suite` still upgrades at startup. `AUTO_UPDATE_INTERVAL_HOURS=0` (default) disables unattended updates. Positive integer enables background `apk update && apk upgrade --available` on that hourly cadence. `/config/debug/restart-required.txt` records detected OpenSSH package changes; logs mark RESTART REQUIRED. Does not automatically restart sshd or guarantee security fixes are active in running processes.
+**Security and deployment risks:** periodic package replacements can break a live rolling-release container. Use on a disposable Alpine environment first; enable only with planned service restarts and rollback. Current script tracks OpenSSH package changes explicitly but other upgraded libraries/services can also require restart. Persisted /config must be backed up and production volumes never used for experimental testing.
+**Validation:** source inspection only; no live Alpine Docker build, end-to-end SFTP, Fail2Ban packet enforcement or periodic restart testing completed.
+**Status:** private development; not production validated.
+
 ## Required format for future entries
 - Date/time (UTC), author/agent, purpose and issue/PR
 - Added/modified/deleted paths, with exact behavior differences
