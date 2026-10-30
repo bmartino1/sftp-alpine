@@ -1,12 +1,12 @@
 # SAFE TEMPLATE: adapt bind mounts and explicit account provisioning for your installation.
-# Build the experimental Alpine edge image before referencing it below.
+# Build the Alpine edge image before referencing it below.
 services:
   sftp:
     build:
       context: ..
-      dockerfile: Dockerfile.alpine
-    image: sftp-private:edge-test
-    container_name: sftp-edge-test
+      dockerfile: Dockerfile
+    image: sftp-alpine:edge-local
+    container_name: sftp-alpine-test
     hostname: sftp
     restart: unless-stopped
     environment:
