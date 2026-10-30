@@ -1,0 +1,50 @@
+# SAFE TEMPLATE: adapt bind mounts and explicit account provisioning for your installation.
+# Build the Alpine edge image before referencing it below.
+services:
+  sftp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    # The build section uses local source; remove it to pull Docker Hub exclusively.
+    image: bmmbmm01/sftp-alpine:latest
+    container_name: sftp-alpine-test
+    hostname: sftp
+    restart: unless-stopped
+    environment:
+      TZ: America/Chicago
+      AUTO_UPDATE: suite
+      F2B_CONFIG_MODE: symlink
+      F2B_REQUIRED: "true"
+      TAIL_LOGS: "true"
+      LOG_STREAMS: auth,fail2ban
+      CLEAR_LOGS: "false"
+      DEFAULT_ADMIN: "false"
+      # First-boot option: set DEFAULT_ADMIN=true and supply ADMIN_PASS from
+      # a separately secured environment file; not in committed Compose.
+      # ADMIN_USER: admin
+      # ADMIN_UID: "1000"
+      # ADMIN_GID: "100"
+      # ADMIN_PASS: ${ADMIN_PASS:?Set ADMIN_PASS in an untracked .env file}
+      # PUID/PGID=0 affect no file-user mapping in the current entrypoint.
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    # Do not disable AppArmor/seccomp for ordinary production deployments.
+    ports:
+      - "2222:22/tcp"
+    volumes:
+      # Use a NEW isolated test directory. Existing /config is persistent and
+      # will not be overwritten with freshly packaged SSHD defaults.
+      - ./test-config:/config:rw
+      # Add explicitly authorized mounts after validating ownership/chroot.
+      # - /data-to-share:/home/admin/data:rw
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/healthcheck.sh"]
+      interval: 30s
+      timeout: 8s
+      retries: 3
+    logging:
+      driver: local
+      options:
+        max-size: "10m"
+        max-file: "3"
