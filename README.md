@@ -2,7 +2,7 @@
 
 **Default base: Alpine Linux edge (rolling).** This project provides a password-capable, SFTP-only OpenSSH container with persistent configuration, Fail2Ban SSH abuse detection, optional WHOIS reporting, and bind-mounted user shares.
 
-> **Status:** experimental private development. The Alpine test image was built and verified on a Debian 13 Proxmox LXC using FileZilla: password authentication, host bind-mount transfers, checksum integrity, four running Fail2Ban jails, automatic bans, real client blocking, and manual unbanning. The newer OpenSSL CLI and SSH algorithm policy remain pending rebuild and regression testing. This repository is not a published Docker Hub image, CISA certification or FIPS-validated product. The existing public `bmartino1/sftp2` and `bmmbmm01/sftp2:latest` remain separate.
+> **Status:** experimental private development. The Alpine test image was built and verified on a Debian 13 Proxmox LXC using FileZilla: password authentication, host bind-mount transfers, checksum integrity, four running Fail2Ban jails, automatic bans, real client blocking, and manual unbanning. The OpenSSL CLI and restrictive SSH algorithm profile were rebuilt and tested successfully with FileZilla on a fresh config, including RSA-4096 and Ed25519 host-key generation. Actual SSH forwarding was rejected in a Windows client test; additional X11 and tunnel negative tests remain pending. This repository is not a published Docker Hub image, CISA certification or FIPS-validated product. The existing public `bmartino1/sftp2` and `bmmbmm01/sftp2:latest` remain separate.
 
 ## Why Alpine edge?
 The project previously used Debian because its packages and Fail2Ban/WHOIS integration were familiar and dependable. Alpine edge now offers a packaged `whois` client from the **community** repository, as well as newer rolling OpenSSH packages. The default Dockerfile installs Bash so the Bash entrypoint can be retained. It uses `apk upgrade --available` during build and at startup when `AUTO_UPDATE=suite`.
@@ -17,6 +17,13 @@ docker build --pull -f Dockerfile.debian -t sftp-private:debian-test .
 The root `Dockerfile` is the Alpine edge default. `Dockerfile.alpine` is a separate experimental Alpine variant. `Dockerfile.debian` keeps the Debian fallback.
 
 Do **not** mount production credentials, ZFS volumes or SSH host keys when initially testing. Start with a separate `/config` and host port such as `2222:22`. See [examples/docker-compose.yml](examples/docker-compose.yml) for the test deployment, not a production prescription.
+
+## SSH-only restrictions and transfer recovery
+`DisableForwarding yes`, `AllowTcpForwarding no`, `X11Forwarding no`, `PermitTunnel no`, `PermitTTY no`, and `ForceCommand internal-sftp` intentionally prevent interactive shells, X11 and SSH tunnels. Windows SSH testing observed `administratively prohibited` on a TCP forward and `PTY allocation request failed` for an interactive shell. Local `ssh -L` listeners may still be established: this does not indicate a working server-side forward.
+
+SFTP client pause/retry/reconnect and resumable transfers (subject to client behavior and writable partial files) do **not** require SSH TCP forwarding. Test FileZilla's resume/overwrite behavior using disposable files; do not claim guaranteed server-side recovery of interrupted transfers. Keep the standard SFTP port accessible only to authorized clients, preferably through Tailscale ACLs/grants and appropriate host firewalls.
+
+Never publish an image containing an active default `admin:admin` credential. A sample `users.conf` may illustrate the record format, but require an explicitly chosen password for real deployments. A private image or VPN restriction is not sufficient protection for a known default password.
 
 ## First boot and users
 The persistent `/config/sshd/users.conf` file is authoritative. On startup it creates missing users and reapplies configured credentials. Editing a password requires a restart. Existing user UID/GID drift is rejected instead of automatically reowning host data. Removing a line does not yet deprovision the account; this is a pending feature.
