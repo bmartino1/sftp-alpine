@@ -5,7 +5,7 @@
 
 An SFTP-only Docker image based on **Alpine Linux edge (rolling)** with OpenSSH, OpenSSL, Fail2Ban, rsyslog, WHOIS and persistent configuration. The standard SSHD profile restricts interactive shells, SSH forwarding, X11 and tunnels while supporting SFTP clients such as FileZilla.
 
-**Related Debian image:** [GitHub sftp2](https://github.com/bmartino1/sftp2) · [Docker Hub sftp2](https://hub.docker.com/r/bmmbmm01/sftp2). Alpine and Debian are **separate images**; using one does not update the other.
+**Related Debian image:** [GitHub sftp-debian](https://github.com/bmartino1/sftp-debian) · [Docker Hub sftp2](https://hub.docker.com/r/bmmbmm01/sftp2). Alpine and Debian are **separate images**; using one does not update the other.
 
 > **Rolling-release notice:** Alpine edge packages and availability can change without a fixed release schedule. Always test fresh builds and keep a previous known-good image. This is a hardened configuration, **not** a FIPS-certified or CISA-certified product.
 
