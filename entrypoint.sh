@@ -18,9 +18,18 @@ shopt -s nullglob
 # ===== version helpers =====
 ver_fail2ban()  { command -v fail2ban-client >/dev/null 2>&1 && fail2ban-client -V 2>/dev/null | head -n1 | sed 's/[^0-9.]*\([0-9.]*\).*/\1/' || echo "unknown"; }
 ver_ssh_client(){ command -v ssh >/dev/null 2>&1 && ssh -V 2>&1 | sed -n 's/.*OpenSSH_\([^ ]*\).*/\1/p' || echo "unknown"; }
-ver_ssh_server(){ if command -v apk >/dev/null 2>&1; then apk info -v openssh-server 2>/dev/null | head -n1; else dpkg-query -W -f='${Version}\n' openssh-server 2>/dev/null; fi; }
-ver_whois()     { if command -v apk >/dev/null 2>&1; then apk info -v whois 2>/dev/null | head -n1; else dpkg-query -W -f='${Version}\n' whois 2>/dev/null; fi; }
-ver_glibc()     { ldd --version 2>/dev/null | head -n1 | awk '{print $NF}' || echo "unknown"; }
+installed_pkg_version() {
+  local pkg="$1" result
+  if command -v apk >/dev/null 2>&1; then
+    result="$(apk list --installed "$pkg" 2>/dev/null | awk -v p="$pkg" '$1 ~ ("^"p"-[0-9]") {print $1; exit}' || true)"
+    printf '%s' "${result:-absent}"
+  else
+    dpkg-query -W -f='${Version}' "$pkg" 2>/dev/null || printf unknown
+  fi
+}
+ver_ssh_server(){ installed_pkg_version openssh-server; }
+ver_whois()     { installed_pkg_version whois; }
+ver_libc()      { if command -v apk >/dev/null 2>&1; then installed_pkg_version musl; else ldd --version 2>&1 | head -n1; fi; }
 
 print_versions() {
   local when="$1"
@@ -29,7 +38,7 @@ print_versions() {
   info "  OpenSSH client: $(ver_ssh_client)"
   info "  OpenSSH server: $(ver_ssh_server)"
   info "  whois:          $(ver_whois)"
-  info "  glibc:          $(ver_glibc)"
+  info "  libc:           $(ver_libc)"
 }
 
 # ===== timezone =====
