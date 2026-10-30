@@ -32,20 +32,26 @@ Use an isolated directory for your first run; don't mount production keys or use
 
 ```bash
 mkdir -p ./test-config ./test-share
+# Choose a unique admin password for this disposable first boot.
+read -rsp "Test admin password: " ADMIN_PASS; echo
+export ADMIN_PASS
 docker run -d --name sftp-alpine-test \
   --cap-add=NET_ADMIN --cap-add=NET_RAW \
   -p 2222:22 \
   -e TZ=America/Chicago \
   -e AUTO_UPDATE=none \
-  -e DEFAULT_ADMIN=false \
+  -e DEFAULT_ADMIN=true \
+  -e ADMIN_USER=admin \
+  -e ADMIN_PASS \
   -v "$(pwd)/test-config:/config" \
   -v "$(pwd)/test-share:/home/admin/data" \
   sftp-alpine:edge-local
+unset ADMIN_PASS
 ```
 
-**Before normal startup**, prepare `test-config/sshd/users.conf` with a unique password, for example `admin:YOUR_UNIQUE_PASSWORD:1000:100:data`. The example above sets `DEFAULT_ADMIN=false`, so an empty config will not expose a working SFTP login; seed or create the configuration first. For the automatic first-boot admin option, set `DEFAULT_ADMIN=true` and supply a **non-placeholder** `ADMIN_PASS`. Do not commit real passwords, host keys or `/config` contents.
+The example above seeds `test-config/sshd/users.conf` with the chosen first-boot password. For manual account management, set `DEFAULT_ADMIN=false`, prepare `test-config/sshd/users.conf` with a record such as `admin:YOUR_UNIQUE_PASSWORD:1000:100:data`, and then start the container. Do not commit real passwords, host keys or `/config` contents.
 
-See [examples/docker-compose.yml](examples/docker-compose.yml) for a Compose-based isolated test.
+For Docker Compose, use the repository-root [docker-compose.yml](https://github.com/bmartino1/sftp-alpine/blob/main/docker-compose.yml). Set `ADMIN_PASS` in a local, untracked `.env` file before running `docker compose up -d --build`. The template builds the local Alpine `Dockerfile`; remove its `build` section to pull the published Docker Hub image instead.
 
 ## Environment variables
 
@@ -117,6 +123,6 @@ docker inspect --format '{{.State.Health.Status}}' sftp-alpine-test
 
 Verify authentication and read/write permissions using a test SFTP client and confirm that Fail2Ban bans block real unwanted connections. A jail showing as running is not itself proof of firewall enforcement. Docker NAT or VPN routing may affect which client IP SSHD sees.
 
-Source code is covered by [LICENSE](LICENSE); included Linux packages retain their own licenses. See [third-party license notes](doc/THIRD-PARTY-LICENSES.md) and [user-management guidance](doc/USER-MANAGEMENT.md).
+Source code is covered by [LICENSE](https://github.com/bmartino1/sftp-alpine/blob/main/LICENSE); included Linux packages retain their own licenses. See [third-party license notes](https://github.com/bmartino1/sftp-alpine/blob/main/doc/THIRD-PARTY-LICENSES.md) and [user-management guidance](https://github.com/bmartino1/sftp-alpine/blob/main/doc/USER-MANAGEMENT.md).
 
 For support, use [the Unraid SFTP support thread](https://forums.unraid.net/topic/189050-support-sftp-fail2ban).
