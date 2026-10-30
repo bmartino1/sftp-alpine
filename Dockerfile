@@ -1,6 +1,6 @@
-# Default Alpine edge rolling build. Not production-validated or FIPS certified.
+# Default Alpine edge rolling build. Rolling release; not FIPS certified.
 FROM alpine:edge
-LABEL org.opencontainers.image.title="sftp-private-alpine-experimental"
+LABEL org.opencontainers.image.title="sftp-alpine-edge"
 ENV TZ=America/Chicago AUTO_UPDATE=suite DEFAULT_ADMIN=true
 RUN apk update && apk upgrade --available && apk add --no-cache bash tini openssh-server openssh-client openssh-sftp-server \
   fail2ban rsyslog whois iptables nftables tzdata ca-certificates curl openssl \
