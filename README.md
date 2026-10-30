@@ -1,103 +1,122 @@
-# SFTP with Fail2Ban — Private Development
+# SFTP with Fail2Ban — Alpine Edge
 
-**Default base: Alpine Linux edge (rolling).** This project provides a password-capable, SFTP-only OpenSSH container with persistent configuration, Fail2Ban SSH abuse detection, optional WHOIS reporting, and bind-mounted user shares.
+[![Docker Hub](https://img.shields.io/badge/Docker%20Hub-bmmbmm01%2Fsftp--alpine-2496ED?logo=docker&logoColor=white)](https://hub.docker.com/r/bmmbmm01/sftp-alpine)
+[![GitHub](https://img.shields.io/badge/Source-bmartino1%2Fsftp--alpine-181717?logo=github&logoColor=white)](https://github.com/bmartino1/sftp-alpine)
 
-> **Status:** experimental private development. The Alpine test image was built and verified on a Debian 13 Proxmox LXC using FileZilla: password authentication, host bind-mount transfers, checksum integrity, four running Fail2Ban jails, automatic bans, real client blocking, and manual unbanning. The OpenSSL CLI and restrictive SSH algorithm profile were rebuilt and tested successfully with FileZilla on a fresh config, including RSA-4096 and Ed25519 host-key generation. Actual SSH forwarding was rejected in a Windows client test; additional X11 and tunnel negative tests remain pending. This repository is not a published Docker Hub image, CISA certification or FIPS-validated product. The existing public `bmartino1/sftp2` and `bmmbmm01/sftp2:latest` remain separate.
+An SFTP-only Docker image based on **Alpine Linux edge (rolling)** with OpenSSH, OpenSSL, Fail2Ban, rsyslog, WHOIS and persistent configuration. The standard SSHD profile restricts interactive shells, SSH forwarding, X11 and tunnels while supporting SFTP clients such as FileZilla.
 
-## Why Alpine edge?
-The project previously used Debian because its packages and Fail2Ban/WHOIS integration were familiar and dependable. Alpine edge now offers a packaged `whois` client from the **community** repository, as well as newer rolling OpenSSH packages. The default Dockerfile installs Bash so the Bash entrypoint can be retained. It uses `apk upgrade --available` during build and at startup when `AUTO_UPDATE=suite`.
+**Related Debian image:** [GitHub sftp2](https://github.com/bmartino1/sftp2) · [Docker Hub sftp2](https://hub.docker.com/r/bmmbmm01/sftp2). Alpine and Debian are **separate images**; using one does not update the other.
 
-The package manager can only install releases available in Alpine's repositories. Upgrading before SSHD starts activates upgraded binaries at that launch; **it does not hot-patch a running daemon**. Redeployment from an older image resets packages to that image until startup updates run. Maintain a rollback image and backed-up `/config`.
+> **Rolling-release notice:** Alpine edge packages and availability can change without a fixed release schedule. Always test fresh builds and keep a previous known-good image. This is a hardened configuration, **not** a FIPS-certified or CISA-certified product.
 
-## Build variants
-```sh
-docker build --pull -t sftp-private:edge-test .
-docker build --pull -f Dockerfile.debian -t sftp-private:debian-test .
+## Features
+
+- Alpine edge packages, with `apk upgrade --available` during image build.
+- Optional `AUTO_UPDATE=suite` at startup and opt-in periodic updates; running SSHD is **not** hot-patched.
+- Four Fail2Ban jails: `sshd`, `sshd-cipher-mismatch`, `sshd-banner-fail`, and `recidive`.
+- Persistent SSH host keys, user accounts, security logs, Fail2Ban configuration and ban database under `/config`.
+- SFTP chroot homes with writable shares mounted **below** `/home/USERNAME`; existing share permissions preserved by default.
+- Build and runtime version reporting, health check and security diagnostics.
+
+## Build and run
+
+The repository's root `Dockerfile` builds the **Alpine edge** image.
+
+```bash
+git clone https://github.com/bmartino1/sftp-alpine.git
+cd sftp-alpine
+docker build --pull --no-cache -t sftp-alpine:edge-local .
 ```
-The root `Dockerfile` is the Alpine edge default. `Dockerfile.alpine` is a separate experimental Alpine variant. `Dockerfile.debian` keeps the Debian fallback.
 
-Do **not** mount production credentials, ZFS volumes or SSH host keys when initially testing. Start with a separate `/config` and host port such as `2222:22`. See [examples/docker-compose.yml](examples/docker-compose.yml) for the test deployment, not a production prescription.
+Use an isolated directory for your first run; don't mount production keys or user data before validation.
 
-## SSH-only restrictions and transfer recovery
-`DisableForwarding yes`, `AllowTcpForwarding no`, `X11Forwarding no`, `PermitTunnel no`, `PermitTTY no`, and `ForceCommand internal-sftp` intentionally prevent interactive shells, X11 and SSH tunnels. Windows SSH testing observed `administratively prohibited` on a TCP forward and `PTY allocation request failed` for an interactive shell. Local `ssh -L` listeners may still be established: this does not indicate a working server-side forward.
-
-SFTP client pause/retry/reconnect and resumable transfers (subject to client behavior and writable partial files) do **not** require SSH TCP forwarding. Test FileZilla's resume/overwrite behavior using disposable files; do not claim guaranteed server-side recovery of interrupted transfers. Keep the standard SFTP port accessible only to authorized clients, preferably through Tailscale ACLs/grants and appropriate host firewalls.
-
-Never publish an image containing an active default `admin:admin` credential. A sample `users.conf` may illustrate the record format, but require an explicitly chosen password for real deployments. A private image or VPN restriction is not sufficient protection for a known default password.
-
-## First boot and users
-The persistent `/config/sshd/users.conf` file is authoritative. On startup it creates missing users and reapplies configured credentials. Editing a password requires a restart. Existing user UID/GID drift is rejected instead of automatically reowning host data. Removing a line does not yet deprovision the account; this is a pending feature.
-
-Supported examples (not actual credentials):
-```text
-admin:REPLACE_WITH_SECRET:1000:100:data
-anotheruser:REPLACE_WITH_SECRET:1001:100:uploads,downloads
+```bash
+mkdir -p ./test-config ./test-share
+docker run -d --name sftp-alpine-test \
+  --cap-add=NET_ADMIN --cap-add=NET_RAW \
+  -p 2222:22 \
+  -e TZ=America/Chicago \
+  -e AUTO_UPDATE=none \
+  -e DEFAULT_ADMIN=false \
+  -v "$(pwd)/test-config:/config" \
+  -v "$(pwd)/test-share:/home/admin/data" \
+  sftp-alpine:edge-local
 ```
-Encrypted password records use `user:hash:e:uid:gid[:directories]`. Never commit real credentials.
 
-When `users.conf` is missing, `DEFAULT_ADMIN=true` can seed `ADMIN_USER` with numeric `ADMIN_UID`, `ADMIN_GID` and an explicitly supplied **non-placeholder** `ADMIN_PASS`. No functional `admin/admin` default is distributed. `DEFAULT_ADMIN=false` creates an empty file and the service will not expose an unconfigured SFTP listener. The environment value for `ADMIN_PASS` may be visible to Docker administrators.
+**Before normal startup**, prepare `test-config/sshd/users.conf` with a unique password, for example `admin:YOUR_UNIQUE_PASSWORD:1000:100:data`. The example above sets `DEFAULT_ADMIN=false`, so an empty config will not expose a working SFTP login; seed or create the configuration first. For the automatic first-boot admin option, set `DEFAULT_ADMIN=true` and supply a **non-placeholder** `ADMIN_PASS`. Do not commit real passwords, host keys or `/config` contents.
 
-**Mount shares below the chroot home**, e.g. `/home/admin/data` or `/home/anotheruser/uploads`. The home itself must remain root-owned and non-writable by the user. New share subdirectories are created with mode `2770` and the user UID/GID. Existing bind-mounted share directories retain their permissions unless `SHARE_MOUNT_PERMS=group` is explicitly set; that mode can change a host mount root's ownership (nonrecursively). Never apply recursive chown/chmod to shared host data. `PUID=0` / `PGID=0` are not SFTP account-mapping variables.
+See [examples/docker-compose.yml](examples/docker-compose.yml) for a Compose-based isolated test.
 
-More details: [doc/USER-MANAGEMENT.md](doc/USER-MANAGEMENT.md).
+## Environment variables
 
-## Configuration and logs
-Persistent state is stored under `/config`: `sshd/sshd_config`, `sshd/users.conf`, `sshd/keys/`, `userkeys/`, `fail2ban/`, `log/`, and `debug/`. Missing defaults are seeded; existing files are not automatically migrated. SSH host keys persist to avoid changing the server identity after recreation.
-
-`ForceCommand internal-sftp` enforces SFTP-only operations. FileZilla remains the target client. The standard profile uses password authentication and is **not FIPS-certified**; FIPS crypto requires a separate evaluated build and validated provider.
-
-Fail2Ban uses persisted auth logs and a persistent SQLite ban database. The bundled jails are `sshd`, `sshd-cipher-mismatch`, `sshd-banner-fail`, and `recidive`. WHOIS appends ban enrichment to `/config/log/whois.log`. No email is sent by default. Existing `/config/fail2ban/jail.d/*.local` files may override newer defaults: review effective settings before migration.
-
-## Intended private home-lab deployment (Tailscale)
-The target distribution is a **private Docker Hub Alpine tag** for the operator and trusted friends. Clients include FileZilla on PCs, NAS hosts, or other Docker hosts over a Tailscale tailnet. Tailscale membership and access policies are the first network boundary; OpenSSH still provides independent server authentication and encrypted SFTP transport. Keep port publishing limited to the intended LAN or Tailscale interface (container port 22 is not necessarily published as host port 22).
-
-The standard profile is **hardened, not FIPS-validated and not CISA-certified**. CISA Secure by Design guidance and FIPS-approved algorithm principles are references for design and testing, not claims of certification. Ed25519/RSA-4096 host keys and modern negotiated encryption are retained for FileZilla compatibility. SSH host keys are created on first boot and persisted under `/config/sshd/keys`; never bake keys or passwords into images. Reusing `/config` preserves trusted fingerprints; a new `/config` intentionally creates a new server identity that clients must verify.
-
-**Fail2Ban network caveat:** It only bans source IPs visible to SSHD. Tailscale subnet routing, source NAT or Docker bridges may mask the individual client IP. Test with actual tailnet clients and avoid banning a shared gateway or router; an earlier LAN IP ban test does not prove all Tailscale topologies.
-
-**Upgrades:** Use tagged images, pull/build and controlled recreation rather than assuming periodic APK upgrades restart existing daemons. Preserve `/config` and host-mounted share directories; never delete production state to deploy a new version. Review SSH crypto config in `/config/sshd/sshd_config`, since persisted copies are not overwritten by revised image defaults.
-
-## Configuration variables
-| Variable | Default | Meaning |
+| Variable | Default | Description |
 |---|---|---|
-| `TZ` | `America/Chicago` | Container timezone |
-| `AUTO_UPDATE` | `suite` | Upgrade packages from configured distro; `none` disables, `custom` invokes `/config/updateapps.sh` |
-| `AUTO_UPDATE_INTERVAL_HOURS` | `0` | Optional hourly-cadence unattended Alpine APK upgrades; `0` disables, changes to OpenSSH trigger restart-required log, not automatic restart |
-| `DEFAULT_ADMIN` | `true` | Seed admin only if users.conf is missing |
-| `ADMIN_USER` | `admin` | First-boot user |
-| `ADMIN_PASS` | unset | Required secure first-boot password |
-| `ADMIN_UID`, `ADMIN_GID` | `1000`, `100` | First-boot user identity |
-| `F2B_REQUIRED` | `true` | Refuse SSHD startup if main Fail2Ban jail is unavailable |
-| `F2B_CONFIG_MODE` | `symlink` | Persisted configuration wiring |
-| `SHARE_MOUNT_PERMS` | `check` | Preserve existing shares; `group` changes direct share root only |
-| `TAIL_LOGS` | `true` | Mirror auth and Fail2Ban logs to Docker stdout |
-| `LOG_STREAMS` | `auth,fail2ban` | Select streamed files |
-| `CLEAR_LOGS` | `false` | Archive and clear old logs if explicitly requested |
-| `DEBUG_TESTING` | `false` | Write debug configuration checks |
+| `TZ` | `America/Chicago` | Timezone for logs and container processes |
+| `AUTO_UPDATE` | `suite` | `suite` updates Alpine packages at startup; `none` disables; `custom` calls `/config/updateapps.sh` |
+| `AUTO_UPDATE_INTERVAL_HOURS` | `0` when omitted | Optional periodic APK upgrade interval; `0` disables; upgraded SSHD requires a controlled restart |
+| `DEFAULT_ADMIN` | `true` | On **first boot only**, seed the admin if `users.conf` is absent |
+| `ADMIN_USER` | `admin` | First-boot admin username |
+| `ADMIN_PASS` | unset | First-boot admin password; `password`, `admin` and `change-me-now` are rejected |
+| `ADMIN_UID` | `1000` | First-boot admin user ID |
+| `ADMIN_GID` | `100` | First-boot admin group ID |
+| `SFTP_USERS` | unset | Whitespace-separated inline user specifications for the **current startup**; these are not written back to `users.conf` |
+| `PASSWORD_AUTH` | unset | Override `PasswordAuthentication` in the active SSHD config |
+| `ALLOW_USERS` | unset | SSHD `AllowUsers` allowlist |
+| `F2B_CONFIG_MODE` | `symlink` | `symlink`, `overlay`, `noclobber`, or `replace` |
+| `F2B_REQUIRED` | `true` | Refuse SSHD startup if the main Fail2Ban jail is not ready |
+| `SHARE_MOUNT_PERMS` | `check` | Preserve existing share permissions; `group` opts into a nonrecursive ownership/mode change at share roots |
+| `DISABLE_IMKLOG` | `true` | Disable container-hostile rsyslog kernel log input |
+| `MODE` | `start` | `start` serves SFTP; `seed` prepares defaults and exits (subject to account checks) |
+| `TAIL_LOGS` | `true` | Mirror selected persisted log files to Docker output |
+| `LOG_STREAMS` | `auth,fail2ban` | Comma-separated `auth`, `fail2ban`, `whois` |
+| `DEBUG_TESTING` | `false` | Write preflight diagnostics to `/config/debug` |
+| `MAIL_SERVER` | `false` | Permit custom Fail2Ban mail actions when explicitly enabled |
+| `CLEAR_LOGS` | `false` | Archive and clear prior logs when enabled |
+| `PUID`, `PGID` | Not used for SFTP identity | Configure user UID/GID in `users.conf` or initial `ADMIN_UID`/`ADMIN_GID` |
 
-## Build versus runtime versions
-The image records a package snapshot at `/opt/debug/build-versions.txt` during build. Docker startup logs report `pre-update` and `post-update` inventories; for Alpine, each line includes the installed APK revision (rather than assuming SSHD's upstream version alone proves security status). `AUTO_UPDATE=suite` runs before SSHD starts. Optional `AUTO_UPDATE_INTERVAL_HOURS=24` performs package upgrades in the background while the container is up, but **cannot hot-replace an already-running sshd**. If OpenSSH changes it logs `RESTART REQUIRED` and writes `/config/debug/restart-required.txt`. Other daemon/library upgrades may also require a restart. Use a disposable environment before enabling this on an exposed service.
+**Alpine versus Debian admin synchronization:** In this Alpine implementation, `ADMIN_PASS` only seeds a **missing** `users.conf`. Changing `ADMIN_PASS` later does **not** rewrite an existing account. Edit `/config/sshd/users.conf` and restart to change a persisted password. Similarly, `SFTP_USERS` is applied at startup but is not persisted to that file. Do not assume Debian `sftp2` environment synchronization behavior applies to this image.
 
-## Verification
-Run these **after** starting an isolated test container:
-```sh
-bash /usr/local/bin/validate-security.sh
-bash /usr/local/bin/security-status.sh
-bash /usr/local/bin/healthcheck.sh
-fail2ban-client -t
-fail2ban-client status
-apk info -v openssh-server fail2ban whois
-command -v whois
+## Persistent configuration and permissions
+
+Mount the host's application data at `/config`. Key locations:
+
+| Path | Purpose |
+|---|---|
+| `/config/sshd/users.conf` | Persisted user definitions and password hashes |
+| `/config/sshd/sshd_config` | SSHD configuration, seeded when missing |
+| `/config/sshd/keys/` | Persistent SSH server host keys |
+| `/config/fail2ban/` | Persistent Fail2Ban settings and SQLite state |
+| `/config/log/` | Auth, Fail2Ban, and WHOIS logs |
+| `/config/debug/` | Runtime diagnostics and restart-required notice |
+
+Supported account records:
+
+```text
+admin:YOUR_UNIQUE_PASSWORD:1000:100:data
+user2:ANOTHER_UNIQUE_PASSWORD:1001:100:uploads
+user3:ENCRYPTED_PASSWORD_HASH:e:1002:100:uploads
 ```
-These checks do not replace an actual FileZilla upload/download, SSH shell-denial test, or observed iptables/nftables packet drop. A responding Fail2Ban daemon is not equivalent to a verified ban.
 
-## Licensing and provenance
-The repository's original [MIT license](LICENSE) remains in force for repository code. Alpine and installed packages have **their own licenses**; they are not relicensed under MIT. For example, Alpine edge community `whois` is GPL-2.0-or-later. See [doc/THIRD-PARTY-LICENSES.md](doc/THIRD-PARTY-LICENSES.md) and the Alpine package index. Review distribution notice obligations before publishing derived images.
+Chroot directories (`/home/admin`) must remain `root:root` and non-writable. Mount your files under a child directory (`/home/admin/data`). Existing host ownership/ACLs are respected unless you explicitly enable `SHARE_MOUNT_PERMS=group`. Use `NET_ADMIN` and `NET_RAW` when you need Fail2Ban's firewall enforcement.
 
-## More information
-- [Development change log](doc/CHANGELOG.md)
-- [Security review](doc/SECURITY-REVIEW.md)
-- [Alpine and FIPS research](doc/ALPINE-FIPS-PLAN.md)
-- [Private project documentation](doc/README.md)
-- [Public project](https://github.com/bmartino1/sftp2)
-- [Unraid support thread](https://forums.unraid.net/topic/189050-support-sftp-fail2ban)
+If migrating a running server, **preserve both `users.conf` and the existing SSH host keys**. Losing the keys changes the SSH server identity and prompts clients to reverify it.
+
+## Updates, verification and security
+
+`AUTO_UPDATE=suite` upgrades available Alpine edge packages before SSHD starts. Optional `AUTO_UPDATE_INTERVAL_HOURS=24` enables periodic checks; changes to OpenSSH require a deliberate restart to run updated binaries and libraries. An old image may return to older installed packages when recreated; rebuild and redeploy regularly.
+
+After starting the container:
+
+```bash
+docker exec sftp-alpine-test ssh -V
+docker exec sftp-alpine-test openssl version
+docker exec sftp-alpine-test fail2ban-client status
+docker exec sftp-alpine-test sshd -t
+docker inspect --format '{{.State.Health.Status}}' sftp-alpine-test
+```
+
+Verify authentication and read/write permissions using a test SFTP client and confirm that Fail2Ban bans block real unwanted connections. A jail showing as running is not itself proof of firewall enforcement. Docker NAT or VPN routing may affect which client IP SSHD sees.
+
+Source code is covered by [LICENSE](LICENSE); included Linux packages retain their own licenses. See [third-party license notes](doc/THIRD-PARTY-LICENSES.md) and [user-management guidance](doc/USER-MANAGEMENT.md).
+
+For support, use [the Unraid SFTP support thread](https://forums.unraid.net/topic/189050-support-sftp-fail2ban).
