@@ -1,0 +1,13 @@
+# Never commit runtime credentials, generated SSH host keys, or local settings
+.env
+.env.*
+!.env.example
+test-config/
+test-share/
+config/
+*.pem
+*.key
+id_rsa
+id_ed25519
+__pycache__/
+.DS_Store
