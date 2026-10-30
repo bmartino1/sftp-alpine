@@ -61,8 +61,8 @@ For Docker Compose, use the repository-root [docker-compose.yml](https://github.
 | `AUTO_UPDATE` | `suite` | `suite` updates Alpine packages at startup; `none` disables; `custom` calls `/config/updateapps.sh` |
 | `AUTO_UPDATE_INTERVAL_HOURS` | `0` when omitted | Optional periodic APK upgrade interval; `0` disables; upgraded SSHD requires a controlled restart |
 | `DEFAULT_ADMIN` | `true` | On **first boot only**, seed the admin if `users.conf` is absent |
-| `ADMIN_USER` | `admin` | First-boot admin username |
-| `ADMIN_PASS` | unset | First-boot admin password; `password`, `admin` and `change-me-now` are rejected |
+| `ADMIN_USER` | `admin` | Used only if `/config/sshd/users.conf` does not already exist and `DEFAULT_ADMIN=true` |
+| `ADMIN_PASS` | unset | Required for automatic first-boot seeding when `users.conf` is missing; `password`, `admin` and `change-me-now` are rejected by the entrypoint |
 | `ADMIN_UID` | `1000` | First-boot admin user ID |
 | `ADMIN_GID` | `100` | First-boot admin group ID |
 | `SFTP_USERS` | unset | Whitespace-separated inline user specifications for the **current startup**; these are not written back to `users.conf` |
@@ -80,7 +80,7 @@ For Docker Compose, use the repository-root [docker-compose.yml](https://github.
 | `CLEAR_LOGS` | `false` | Archive and clear prior logs when enabled |
 | `PUID`, `PGID` | Not used for SFTP identity | Configure user UID/GID in `users.conf` or initial `ADMIN_UID`/`ADMIN_GID` |
 
-**Alpine versus Debian admin synchronization:** In this Alpine implementation, `ADMIN_PASS` only seeds a **missing** `users.conf`. Changing `ADMIN_PASS` later does **not** rewrite an existing account. Edit `/config/sshd/users.conf` and restart to change a persisted password. Similarly, `SFTP_USERS` is applied at startup but is not persisted to that file. Do not assume Debian `sftp2` environment synchronization behavior applies to this image.
+**Alpine versus Debian admin synchronization (source verified, fresh-build runtime verification still needed):** In this Alpine implementation, `ADMIN_USER` and `ADMIN_PASS` only seed a **missing** `users.conf` when `DEFAULT_ADMIN=true`. Changing `ADMIN_PASS` later does **not** rewrite an existing account. Edit `/config/sshd/users.conf` and restart to change a persisted password. Similarly, `SFTP_USERS` is applied at startup but is not persisted to that file. Do not assume Debian `sftp2` environment synchronization behavior applies to this image.
 
 ## Persistent configuration and permissions
 
