@@ -5,7 +5,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    # The build section uses local source; remove it to pull Docker Hub exclusively.
+    # Local source build. Remove the build stanza to pull Docker Hub only.
     image: bmmbmm01/sftp-alpine:latest
     container_name: sftp-alpine-test
     hostname: sftp
@@ -18,13 +18,12 @@ services:
       TAIL_LOGS: "true"
       LOG_STREAMS: auth,fail2ban
       CLEAR_LOGS: "false"
-      DEFAULT_ADMIN: "false"
-      # First-boot option: set DEFAULT_ADMIN=true and supply ADMIN_PASS from
-      # a separately secured environment file; not in committed Compose.
+      DEFAULT_ADMIN: "true"
+      # ADMIN_PASS is required for first boot; use an untracked local .env file.
       # ADMIN_USER: admin
       # ADMIN_UID: "1000"
       # ADMIN_GID: "100"
-      # ADMIN_PASS: ${ADMIN_PASS:?Set ADMIN_PASS in an untracked .env file}
+      ADMIN_PASS: ${ADMIN_PASS:?Set ADMIN_PASS in a local, untracked .env file}
       # PUID/PGID=0 affect no file-user mapping in the current entrypoint.
     cap_add:
       - NET_ADMIN
