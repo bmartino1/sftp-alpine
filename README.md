@@ -1,6 +1,6 @@
 # SFTP with Fail2Ban — Alpine Edge
 
-[![Docker Hub](https://img.shields.io/badge/Docker%20Hub-bmmbmm01%2Fsftp--alpine-2496ED?logo=docker&logoColor=white)](https://hub.docker.com/r/bmmbmm01/sftp)
+[![Docker Hub](https://img.shields.io/badge/Docker%20Hub-bmmbmm01%2Fsftp-2496ED?logo=docker&logoColor=white)](https://hub.docker.com/r/bmmbmm01/sftp)
 [![GitHub](https://img.shields.io/badge/Source-bmartino1%2Fsftp--alpine-181717?logo=github&logoColor=white)](https://github.com/bmartino1/sftp-alpine)
 
 An SFTP-only Docker image based on **Alpine Linux edge (rolling)** with OpenSSH, OpenSSL, Fail2Ban, rsyslog, WHOIS and persistent configuration. The standard SSHD profile restricts interactive shells, SSH forwarding, X11 and tunnels while supporting SFTP clients such as FileZilla.
